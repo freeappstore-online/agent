@@ -19,6 +19,7 @@ new_sqlite_classes = ["AgentSession"]
 [vars]
 CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
 STORE = "apps"
+VAPID_PUBLIC_KEY = "BM0KWao4V5j4j1L4dOJhmG6w9kVgiUANKzCDGCqcZE3izzT_tJhB5bq2CvtkthveWR2VUGvadFbGMQP6Qablybk"
 
 # Secrets (set via `wrangler secret put`):
 # GITHUB_TOKEN       — org-level PAT for provisioning + pushing code

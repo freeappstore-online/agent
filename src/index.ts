@@ -12,6 +12,8 @@ export interface Env {
   CF_GLOBAL_KEY: string;
   CF_EMAIL: string;
   STORE: string;
+  VAPID_PUBLIC_KEY: string;
+  VAPID_PRIVATE_KEY: string;
 }
 
 function corsHeaders(request: Request, domain: string): Record<string, string> {
@@ -55,7 +57,7 @@ export default {
     }
 
     // Routes: /session/:id/chat, /session/:id/status, /session/:id/files, /session/:id/reset
-    const match = path.match(/^\/session\/([a-zA-Z0-9_-]{1,64})\/(chat|status|files|history|errors|reset)$/);
+    const match = path.match(/^\/session\/([a-zA-Z0-9_-]{1,64})\/(chat|status|files|history|errors|reset|push-subscribe)$/);
     if (!match) {
       return new Response(JSON.stringify({ error: "not found", hint: "Use /session/:id/chat" }), {
         status: 404,

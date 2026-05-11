@@ -9,6 +9,7 @@ import { getConfig } from "./config";
 import { getTemplateFiles } from "./template";
 import { runAgentTurn } from "./agent";
 import { executeInfraTool } from "./infra-exec";
+import { sendWebPush, type PushSubscription } from "./push";
 
 interface ErrorEntry {
   timestamp: string;
@@ -93,6 +94,9 @@ export class AgentSession implements DurableObject {
       if (path === "/reset" && request.method === "POST") {
         return this.handleReset(request);
       }
+      if (path === "/push-subscribe" && request.method === "POST") {
+        return this.handlePushSubscribe(request);
+      }
       return json({ error: "not found" }, 404, request, this.config.domain);
     } catch (err) {
       return json({ error: String(err) }, 500, request, this.config.domain);
@@ -176,6 +180,12 @@ export class AgentSession implements DurableObject {
                   session.deployStatus = status;
                   this.state.storage.put("session", session);
                   sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
+                  if (status.phase === "live" || status.phase === "error") {
+                    this.sendPush(status.phase === "live"
+                      ? `Build complete! ${(status as any).appUrl || ""}`
+                      : `Build failed: ${(status as any).error?.slice(0, 100) || "unknown"}`
+                    );
+                  }
                 },
                 onAppDeployed: (id, name) => {
                   session.appId = id;
@@ -309,6 +319,28 @@ export class AgentSession implements DurableObject {
     };
     await this.save();
     return json({ ok: true }, 200, request, this.config.domain);
+  }
+
+  /** POST /push-subscribe — store push subscription for notifications */
+  private async handlePushSubscribe(request: Request): Promise<Response> {
+    const sub = await request.json<PushSubscription>();
+    if (!sub.endpoint) {
+      return json({ error: "endpoint required" }, 400, request, this.config.domain);
+    }
+    await this.state.storage.put("pushSubscription", sub);
+    return json({ ok: true }, 200, request, this.config.domain);
+  }
+
+  /** Send a push notification to the subscribed client */
+  private async sendPush(message: string): Promise<void> {
+    if (!this.env.VAPID_PUBLIC_KEY || !this.env.VAPID_PRIVATE_KEY) return;
+    const sub = await this.state.storage.get<PushSubscription>("pushSubscription");
+    if (!sub) return;
+    try {
+      await sendWebPush(sub, this.env.VAPID_PUBLIC_KEY, this.env.VAPID_PRIVATE_KEY, message);
+    } catch {
+      // Push failed (subscription expired, etc.) — don't crash the session
+    }
   }
 }
 
