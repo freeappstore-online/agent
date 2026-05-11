@@ -1,0 +1,27 @@
+name = "freeappstore-agent"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+workers_dev = true
+
+[[routes]]
+pattern = "agent.freeappstore.online/*"
+zone_name = "freeappstore.online"
+
+[durable_objects]
+bindings = [
+  { name = "SESSION", class_name = "AgentSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AgentSession"]
+
+[vars]
+CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
+STORE = "apps"
+
+# Secrets (set via `wrangler secret put`):
+# GITHUB_TOKEN       — org-level PAT for provisioning + pushing code
+# CF_API_TOKEN       — Cloudflare API token for Pages/DNS
+# CF_GLOBAL_KEY      — Cloudflare Global API key (for DNS)
+# CF_EMAIL           — Cloudflare account email (for DNS)
