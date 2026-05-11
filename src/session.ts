@@ -180,11 +180,10 @@ export class AgentSession implements DurableObject {
                   session.deployStatus = status;
                   this.state.storage.put("session", session);
                   sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
-                  if (status.phase === "live" || status.phase === "error") {
-                    this.sendPush(status.phase === "live"
-                      ? `Build complete! ${(status as any).appUrl || ""}`
-                      : `Build failed: ${(status as any).error?.slice(0, 100) || "unknown"}`
-                    );
+                  if (status.phase === "live") {
+                    this.sendPush("Your build is live!");
+                  } else if (status.phase === "error") {
+                    this.sendPush("Build failed");
                   }
                 },
                 onAppDeployed: (id, name) => {
@@ -245,7 +244,7 @@ export class AgentSession implements DurableObject {
         tokenUsage: session.tokenUsage,
         deployStatus: session.deployStatus,
         appId: session.appId,
-        appUrl: session.deployStatus?.phase === "live" ? (session.deployStatus as any).appUrl : null,
+        appUrl: session.deployStatus?.phase === "live" ? session.deployStatus.appUrl : null,
       },
       200,
       request,

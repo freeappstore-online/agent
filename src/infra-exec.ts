@@ -95,7 +95,7 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     ctx.config,
     (status) => {
       ctx.onDeployStatus(status);
-      if (status.phase === "live" && "appUrl" in status) liveUrl = (status as any).appUrl;
+      if (status.phase === "live") liveUrl = status.appUrl;
     },
   ).catch((err) => { deployError = String(err); });
 
