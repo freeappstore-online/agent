@@ -337,7 +337,7 @@ export class AgentSession implements DurableObject {
     const sub = await this.state.storage.get<PushSubscription>("pushSubscription");
     if (!sub) return;
     try {
-      await sendWebPush(sub, this.env.VAPID_PUBLIC_KEY, this.env.VAPID_PRIVATE_KEY, message);
+      await sendWebPush(sub, this.env.VAPID_PUBLIC_KEY, this.env.VAPID_PRIVATE_KEY);
     } catch {
       // Push failed (subscription expired, etc.) — don't crash the session
     }

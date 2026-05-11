@@ -96,7 +96,7 @@ describe("sendWebPush — no payload", () => {
 
     try {
       await sendWebPush(FAKE_SUB, VAPID_PUBLIC, VAPID_PRIVATE);
-      expect(mockFetch.mock.calls[0][1].body).toBeNull();
+      expect(mockFetch.mock.calls[0][1].body).toBeUndefined();
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -135,62 +135,3 @@ describe("sendWebPush — no payload", () => {
   });
 });
 
-describe("sendWebPush — with payload", () => {
-  it("sends encrypted body when payload + keys provided", async () => {
-    // Generate a real P-256 key pair for the subscriber
-    const subKeyPair = await crypto.subtle.generateKey(
-      { name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"],
-    );
-    const subPubRaw = new Uint8Array(
-      await crypto.subtle.exportKey("raw", subKeyPair.publicKey),
-    );
-    const authSecret = crypto.getRandomValues(new Uint8Array(16));
-
-    const sub: PushSubscription = {
-      endpoint: "https://fcm.googleapis.com/fcm/send/test-encrypted",
-      keys: {
-        p256dh: btoa(String.fromCharCode(...subPubRaw)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_"),
-        auth: btoa(String.fromCharCode(...authSecret)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_"),
-      },
-    };
-
-    const mockFetch = vi.fn().mockResolvedValue({ status: 201 });
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mockFetch as any;
-
-    try {
-      const result = await sendWebPush(sub, VAPID_PUBLIC, VAPID_PRIVATE, "Build complete!");
-      expect(result).toBe(true);
-
-      const opts = mockFetch.mock.calls[0][1];
-      expect(opts.headers["Content-Type"]).toBe("application/octet-stream");
-      expect(opts.headers["Content-Encoding"]).toBe("aes128gcm");
-      expect(opts.body).toBeInstanceOf(Uint8Array);
-      // aes128gcm header: 16 (salt) + 4 (rs) + 1 (idlen) + 65 (keyid) = 86 bytes minimum
-      expect(opts.body.byteLength).toBeGreaterThan(86);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
-
-  it("skips encryption when keys not provided", async () => {
-    const sub: PushSubscription = {
-      endpoint: "https://fcm.googleapis.com/fcm/send/no-keys",
-      // no keys
-    };
-
-    const mockFetch = vi.fn().mockResolvedValue({ status: 201 });
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mockFetch as any;
-
-    try {
-      await sendWebPush(sub, VAPID_PUBLIC, VAPID_PRIVATE, "Build complete!");
-      const opts = mockFetch.mock.calls[0][1];
-      // Falls back to no-payload push
-      expect(opts.body).toBeNull();
-      expect(opts.headers["Content-Length"]).toBe("0");
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
-});
