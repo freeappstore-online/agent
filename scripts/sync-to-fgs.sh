@@ -25,7 +25,7 @@ echo "Syncing tests..."
 rsync -a "$SRC/src/"*.test.ts "$DEST/src/" 2>/dev/null || true
 
 # Sync config files (not wrangler.toml — FGS has its own)
-for f in tsconfig.json package.json vitest.config.ts; do
+for f in tsconfig.json package.json pnpm-lock.yaml vitest.config.ts; do
   if [ -f "$SRC/$f" ]; then
     cp "$SRC/$f" "$DEST/$f"
   fi
