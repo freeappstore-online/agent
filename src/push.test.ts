@@ -1,9 +1,21 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { sendWebPush, type PushSubscription } from "./push";
 
-// Test VAPID keys (the ones we generated for the platform)
-const VAPID_PUBLIC = "BM0KWao4V5j4j1L4dOJhmG6w9kVgiUANKzCDGCqcZE3izzT_tJhB5bq2CvtkthveWR2VUGvadFbGMQP6Qablybk";
-const VAPID_PRIVATE = "PBDJUL-Y5qEqONcEMJZLC6u0Lz9owu2vT3-j0DNWjNQ";
+// Generate a test VAPID key pair at runtime — never commit real keys
+let VAPID_PUBLIC: string;
+let VAPID_PRIVATE: string;
+
+function b64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+beforeAll(async () => {
+  const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]);
+  const pubRaw = new Uint8Array(await crypto.subtle.exportKey("raw", kp.publicKey));
+  const privJwk = await crypto.subtle.exportKey("jwk", kp.privateKey) as JsonWebKey;
+  VAPID_PUBLIC = b64url(pubRaw);
+  VAPID_PRIVATE = privJwk.d!;
+});
 
 const FAKE_SUB: PushSubscription = {
   endpoint: "https://fcm.googleapis.com/fcm/send/test-id-123",
