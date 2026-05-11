@@ -1,10 +1,10 @@
 /** Execute infra tools server-side. Extracted from session.ts to keep it manageable. */
 
-import type { ToolCall } from "./providers/types";
 import type { StoreConfig } from "./config";
 import type { DeployEnv, DeployStatus } from "./deploy";
 import { deployApp, pushUpdate } from "./deploy";
-import { checkDeployStatus, listDeployed, fetchUrl, getBuildLogs, getCIResults, getAuditResults } from "./infra";
+import { checkDeployStatus, fetchUrl, getAuditResults, getBuildLogs, getCIResults, listDeployed } from "./infra";
+import type { ToolCall } from "./providers/types";
 
 interface ExecContext {
   appId: string | null;
@@ -23,7 +23,8 @@ export async function executeInfraTool(tc: ToolCall, ctx: ExecContext): Promise<
   const targetId = tc.input.id as string | undefined;
   if (targetId && ["push_update", "get_build_logs", "get_ci_results", "check_deploy_status"].includes(tc.name)) {
     if (!ctx.appId) return `Error: no ${config.noun} deployed yet. Deploy first before using ${tc.name}.`;
-    if (targetId !== ctx.appId) return `Error: you can only ${tc.name} on your own ${config.noun} "${ctx.appId}". No access to "${targetId}".`;
+    if (targetId !== ctx.appId)
+      return `Error: you can only ${tc.name} on your own ${config.noun} "${ctx.appId}". No access to "${targetId}".`;
   }
 
   // Validate deploy ID
@@ -38,16 +39,25 @@ export async function executeInfraTool(tc: ToolCall, ctx: ExecContext): Promise<
   }
 
   switch (tc.name) {
-    case "deploy": return executeDeploy(tc, ctx);
-    case "push_update": return executePushUpdate(tc, ctx);
-    case "check_deploy_status": return checkDeployStatus(targetId!, ctx.env, config);
+    case "deploy":
+      return executeDeploy(tc, ctx);
+    case "push_update":
+      return executePushUpdate(tc, ctx);
+    case "check_deploy_status":
+      return checkDeployStatus(targetId!, ctx.env, config);
     case "list_deployed_apps":
-    case "list_deployed_games": return listDeployed(ctx.env, config);
-    case "fetch_url": return executeFetchUrl(tc, config);
-    case "get_build_logs": return getBuildLogs(targetId!, ctx.env, config);
-    case "get_ci_results": return getCIResults(targetId!, ctx.env, config);
-    case "get_audit_results": return getAuditResults(targetId!, config);
-    default: return `Unknown infra tool: ${tc.name}`;
+    case "list_deployed_games":
+      return listDeployed(ctx.env, config);
+    case "fetch_url":
+      return executeFetchUrl(tc, config);
+    case "get_build_logs":
+      return getBuildLogs(targetId!, ctx.env, config);
+    case "get_ci_results":
+      return getCIResults(targetId!, ctx.env, config);
+    case "get_audit_results":
+      return getAuditResults(targetId!, config);
+    default:
+      return `Unknown infra tool: ${tc.name}`;
   }
 }
 
@@ -97,7 +107,9 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
       ctx.onDeployStatus(status);
       if (status.phase === "live") liveUrl = status.appUrl;
     },
-  ).catch((err) => { deployError = String(err); });
+  ).catch((err) => {
+    deployError = String(err);
+  });
 
   if (deployError) {
     ctx.onDeployStatus({ phase: "error", error: deployError });
@@ -108,7 +120,7 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
 
 async function executePushUpdate(tc: ToolCall, ctx: ExecContext): Promise<string> {
   ctx.onDeployStatus({ phase: "pushing", progress: "Pushing update..." });
-  const result = await pushUpdate(tc.input.id as string, ctx.files, tc.input.message as string || "Update", ctx.env, ctx.config);
+  const result = await pushUpdate(tc.input.id as string, ctx.files, (tc.input.message as string) || "Update", ctx.env, ctx.config);
   if (!result.startsWith("Error")) {
     ctx.onDeployStatus({ phase: "building", deployUrl: `Pushing update...` });
   }

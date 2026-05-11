@@ -1,13 +1,13 @@
 /** Agent loop: send messages to AI, handle tool calls, repeat until done. */
 
-import type { AIConfig, Message, ToolCall, ToolResult, StreamEvent, ProviderAdapter } from "./providers/types";
 import type { StoreConfig } from "./config";
 import { AnthropicAdapter } from "./providers/anthropic";
-import { OpenAIAdapter } from "./providers/openai";
-import { GoogleAdapter } from "./providers/google";
 import { GitHubModelsAdapter } from "./providers/github";
-import { getToolDefinitions, INFRA_TOOLS, executeTool } from "./tools";
+import { GoogleAdapter } from "./providers/google";
+import { OpenAIAdapter } from "./providers/openai";
+import type { AIConfig, Message, ProviderAdapter, StreamEvent, ToolCall, ToolResult } from "./providers/types";
 import { getSystemPrompt } from "./template";
+import { executeTool, getToolDefinitions, INFRA_TOOLS } from "./tools";
 
 function createAdapter(config: AIConfig): ProviderAdapter {
   const temp = config.temperature ?? 0.7;
@@ -128,10 +128,7 @@ export async function runAgentTurn(
     }
   }
 
-  const messages: Message[] = [
-    ...cleaned,
-    { role: "user", content: userMessage },
-  ];
+  const messages: Message[] = [...cleaned, { role: "user", content: userMessage }];
   const newMessages: Message[] = [{ role: "user", content: userMessage }];
   const infraRequests: InfraRequest[] = [];
 
@@ -204,8 +201,8 @@ export async function runAgentTurn(
     if (toolCalls.length === 0) break;
 
     // Separate file tools (execute now) from infra tools (execute in session)
-    const fileToolCalls = toolCalls.filter(tc => !INFRA_TOOLS.has(tc.name));
-    const infraToolCalls = toolCalls.filter(tc => INFRA_TOOLS.has(tc.name));
+    const fileToolCalls = toolCalls.filter((tc) => !INFRA_TOOLS.has(tc.name));
+    const infraToolCalls = toolCalls.filter((tc) => INFRA_TOOLS.has(tc.name));
 
     // Execute file tools
     const results: ToolResult[] = [];

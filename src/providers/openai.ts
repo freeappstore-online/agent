@@ -1,4 +1,4 @@
-import type { ProviderAdapter, Message, ToolDef, StreamEvent, ToolCall } from "./types";
+import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class OpenAIAdapter implements ProviderAdapter {
   constructor(
@@ -9,19 +9,12 @@ export class OpenAIAdapter implements ProviderAdapter {
     private maxTokens: number = 16384,
   ) {}
 
-  async *run(
-    systemPrompt: string,
-    messages: Message[],
-    tools: ToolDef[],
-  ): AsyncGenerator<StreamEvent> {
+  async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent> {
     const body: Record<string, unknown> = {
       model: this.model,
       max_tokens: this.maxTokens,
       temperature: this.temperature,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...toOpenAIMessages(messages),
-      ],
+      messages: [{ role: "system", content: systemPrompt }, ...toOpenAIMessages(messages)],
       stream: true,
       stream_options: { include_usage: true },
     };
@@ -45,7 +38,10 @@ export class OpenAIAdapter implements ProviderAdapter {
     if (!res.ok) {
       const err = await res.text();
       if (res.status === 429) {
-        yield { type: "error", data: `Rate limited (429). You've hit the usage limit for this model. Wait a moment and try again, or switch to a different model/provider.\n\nDetails: ${err.slice(0, 300)}` };
+        yield {
+          type: "error",
+          data: `Rate limited (429). You've hit the usage limit for this model. Wait a moment and try again, or switch to a different model/provider.\n\nDetails: ${err.slice(0, 300)}`,
+        };
       } else {
         yield { type: "error", data: `API error ${res.status}: ${err.slice(0, 500)}` };
       }
@@ -147,7 +143,9 @@ async function* parseOpenAISSE(body: ReadableStream): AsyncGenerator<StreamEvent
             let input: Record<string, unknown> = {};
             try {
               input = JSON.parse(acc.argsBuf);
-            } catch { /* empty */ }
+            } catch {
+              /* empty */
+            }
             const call: ToolCall = { id: acc.id, name: acc.name, input };
             yield { type: "tool_call", data: JSON.stringify(call) };
           }

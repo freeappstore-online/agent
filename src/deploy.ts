@@ -32,7 +32,7 @@ export type DeployStatus =
   | { phase: "live"; appUrl: string }
   | { phase: "error"; error: string };
 
-async function cfApi(token: string, accountId: string, path: string, method = "GET", body?: unknown) {
+async function cfApi(token: string, _accountId: string, path: string, method = "GET", body?: unknown) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -97,15 +97,21 @@ export async function deployApp(
   // Step 2: Create CF Pages project — try clean name first, prefix if squatted
   const cfBody = (name: string) => ({
     name,
-    source: { type: "github", config: { owner: config.org, repo_name: deployConfig.id, production_branch: "main", deployments_enabled: true, production_deployments_enabled: true } },
+    source: {
+      type: "github",
+      config: {
+        owner: config.org,
+        repo_name: deployConfig.id,
+        production_branch: "main",
+        deployments_enabled: true,
+        production_deployments_enabled: true,
+      },
+    },
     build_config: { build_command: "npx pnpm@10 install && npx pnpm@10 build", destination_dir: "web/dist" },
     deployment_configs: { production: { env_vars: { NODE_VERSION: { value: "22" } } } },
   });
 
-  const candidates = [
-    deployConfig.id,
-    `${deployConfig.id}-${Date.now() % 10000}`,
-  ];
+  const candidates = [deployConfig.id, `${deployConfig.id}-${Date.now() % 10000}`];
 
   let cfProject = "";
   for (const name of candidates) {
@@ -149,11 +155,17 @@ export async function deployApp(
   while (Date.now() < deadline) {
     await sleep(8000);
     try {
-      const deps = await cfApi(env.CF_API_TOKEN, env.CF_ACCOUNT_ID,
-        `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`);
+      const deps = await cfApi(
+        env.CF_API_TOKEN,
+        env.CF_ACCOUNT_ID,
+        `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
+      );
       const dep = deps.result?.[0];
       if (!dep) continue;
-      if (dep.latest_stage?.status === "success") { onStatus({ phase: "live", appUrl: previewUrl }); return; }
+      if (dep.latest_stage?.status === "success") {
+        onStatus({ phase: "live", appUrl: previewUrl });
+        return;
+      }
       if (dep.latest_stage?.status === "failure") {
         let buildLog = "";
         try {
@@ -161,8 +173,11 @@ export async function deployApp(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments/${dep.id}/history/logs`,
             { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
           );
-          const logData = await logRes.json() as any;
-          buildLog = ((logData.result?.data || []) as any[]).map((l: any) => l.line || "").join("\n").slice(-2000);
+          const logData = (await logRes.json()) as any;
+          buildLog = ((logData.result?.data || []) as any[])
+            .map((l: any) => l.line || "")
+            .join("\n")
+            .slice(-2000);
         } catch {}
         onStatus({ phase: "error", error: `Build failed.\n\n${buildLog || "(no logs)"}` });
         return;
@@ -173,12 +188,7 @@ export async function deployApp(
 }
 
 /** Push all files as a single commit via the Git Data API (tree + commit + ref). */
-async function pushFilesToGitHub(
-  repoId: string,
-  files: Map<string, string>,
-  token: string,
-  config: StoreConfig,
-): Promise<void> {
+async function pushFilesToGitHub(repoId: string, files: Map<string, string>, token: string, config: StoreConfig): Promise<void> {
   const ghApi = makeGhApi(token, config.agentName);
   const repo = `${config.org}/${repoId}`;
 

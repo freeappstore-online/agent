@@ -1,13 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getConfig } from "./config";
-import { executeInfraTool } from "./infra-exec";
 import type { DeployStatus } from "./deploy";
+import { executeInfraTool } from "./infra-exec";
 
 const appsConfig = getConfig("apps");
 
-function makeCtx(overrides: Partial<{
-  appId: string | null;
-}> = {}) {
+function makeCtx(
+  overrides: Partial<{
+    appId: string | null;
+  }> = {},
+) {
   return {
     appId: overrides.appId ?? null,
     files: new Map<string, string>(),
@@ -28,7 +30,11 @@ describe("executeInfraTool — ID validation", () => {
   it("rejects invalid ID format", async () => {
     const ctx = makeCtx();
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "UPPERCASE", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "UPPERCASE", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+      },
       ctx,
     );
     expect(result).toContain("invalid app ID");
@@ -37,7 +43,11 @@ describe("executeInfraTool — ID validation", () => {
   it("rejects ID starting with 'free'", async () => {
     const ctx = makeCtx();
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "freeapp", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "freeapp", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+      },
       ctx,
     );
     expect(result).toContain("invalid app ID");
@@ -46,7 +56,11 @@ describe("executeInfraTool — ID validation", () => {
   it("rejects ID starting with 'pro'", async () => {
     const ctx = makeCtx();
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "proapp", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "proapp", name: "Test", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+      },
       ctx,
     );
     expect(result).toContain("invalid app ID");
@@ -55,7 +69,11 @@ describe("executeInfraTool — ID validation", () => {
   it("rejects deploying a different app after first deploy", async () => {
     const ctx = makeCtx({ appId: "my-app" });
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "other-app", name: "Other", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "other-app", name: "Other", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+      },
       ctx,
     );
     expect(result).toContain("this session already deployed");
@@ -63,19 +81,13 @@ describe("executeInfraTool — ID validation", () => {
 
   it("rejects push_update with no prior deploy", async () => {
     const ctx = makeCtx();
-    const result = await executeInfraTool(
-      { id: "1", name: "push_update", input: { id: "some-app", message: "update" } },
-      ctx,
-    );
+    const result = await executeInfraTool({ id: "1", name: "push_update", input: { id: "some-app", message: "update" } }, ctx);
     expect(result).toContain("no app deployed yet");
   });
 
   it("rejects push_update to a different app", async () => {
     const ctx = makeCtx({ appId: "my-app" });
-    const result = await executeInfraTool(
-      { id: "1", name: "push_update", input: { id: "other-app", message: "update" } },
-      ctx,
-    );
+    const result = await executeInfraTool({ id: "1", name: "push_update", input: { id: "other-app", message: "update" } }, ctx);
     expect(result).toContain("you can only push_update on your own app");
   });
 });
@@ -89,7 +101,11 @@ describe("executeInfraTool — uniqueness check", () => {
     try {
       const ctx = makeCtx();
       const result = await executeInfraTool(
-        { id: "1", name: "deploy", input: { id: "taken-app", name: "Taken", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+        {
+          id: "1",
+          name: "deploy",
+          input: { id: "taken-app", name: "Taken", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+        },
         ctx,
       );
       expect(result).toContain('app ID "taken-app" is already taken');
@@ -108,7 +124,11 @@ describe("executeInfraTool — uniqueness check", () => {
       const ctx = makeCtx({ appId: "my-app" });
       // This will fail at the deploy step (network), but should NOT fail at uniqueness
       const result = await executeInfraTool(
-        { id: "1", name: "deploy", input: { id: "my-app", name: "My App", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" } },
+        {
+          id: "1",
+          name: "deploy",
+          input: { id: "my-app", name: "My App", category: "utilities", icon: "&#128992;", iconBg: "#fff", description: "test" },
+        },
         ctx,
       );
       // Should not contain "already taken" — it passed uniqueness and failed at actual deploy

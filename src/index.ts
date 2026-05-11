@@ -47,13 +47,16 @@ export default {
 
     // Health check
     if (path === "/" || path === "/health") {
-      return new Response(JSON.stringify({
-        ok: true,
-        service: config.agentName,
-        hasSecrets: !!(env.GITHUB_TOKEN && env.CF_API_TOKEN),
-      }), {
-        headers: { "Content-Type": "application/json", ...corsHeaders(request, config.domain) },
-      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          service: config.agentName,
+          hasSecrets: !!(env.GITHUB_TOKEN && env.CF_API_TOKEN),
+        }),
+        {
+          headers: { "Content-Type": "application/json", ...corsHeaders(request, config.domain) },
+        },
+      );
     }
 
     // Routes: /session/:id/chat, /session/:id/status, /session/:id/files, /session/:id/reset

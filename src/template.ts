@@ -245,7 +245,7 @@ export default function App() {
   );
 }`,
 
-  "LICENSE": `MIT License
+  LICENSE: `MIT License
 
 Copyright (c) 2025 FreeAppStore
 
@@ -372,7 +372,7 @@ export default function App() {
   );
 }`,
 
-  "LICENSE": `MIT License
+  LICENSE: `MIT License
 
 Copyright (c) 2025 FreeGameStore
 

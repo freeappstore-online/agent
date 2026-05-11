@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 
 echo "=== Safe Agent Deploy ==="
 
-# 1. Typecheck + test
+# 1. Lint + typecheck + test
+echo "Linting..."
+npx biome check src/
 echo "Typechecking..."
 npx tsc --noEmit
 echo "Running tests..."

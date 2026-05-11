@@ -1,15 +1,15 @@
 /** Durable Object: one instance per agent session.
  *  Stores conversation history, virtual filesystem, token usage, deploy status. */
 
-import type { Message, AIConfig, TokenUsage } from "./providers/types";
-import type { DeployStatus, DeployEnv } from "./deploy";
-import type { Env } from "./index";
+import { runAgentTurn } from "./agent";
 import type { StoreConfig } from "./config";
 import { getConfig } from "./config";
-import { getTemplateFiles } from "./template";
-import { runAgentTurn } from "./agent";
+import type { DeployEnv, DeployStatus } from "./deploy";
+import type { Env } from "./index";
 import { executeInfraTool } from "./infra-exec";
-import { sendWebPush, type PushSubscription } from "./push";
+import type { AIConfig, Message, TokenUsage } from "./providers/types";
+import { type PushSubscription, sendWebPush } from "./push";
+import { getTemplateFiles } from "./template";
 
 interface ErrorEntry {
   timestamp: string;
@@ -111,7 +111,12 @@ export class AgentSession implements DurableObject {
     }>();
 
     if (!body.message || !body.aiConfig?.apiKey || !body.aiConfig?.provider || !body.aiConfig?.model) {
-      return json({ error: "message, aiConfig.provider, aiConfig.model, and aiConfig.apiKey are required" }, 400, request, this.config.domain);
+      return json(
+        { error: "message, aiConfig.provider, aiConfig.model, and aiConfig.apiKey are required" },
+        400,
+        request,
+        this.config.domain,
+      );
     }
 
     const session = await this.load();
@@ -331,7 +336,7 @@ export class AgentSession implements DurableObject {
   }
 
   /** Send a push notification to the subscribed client */
-  private async sendPush(message: string): Promise<void> {
+  private async sendPush(_message: string): Promise<void> {
     if (!this.env.VAPID_PUBLIC_KEY || !this.env.VAPID_PRIVATE_KEY) return;
     const sub = await this.state.storage.get<PushSubscription>("pushSubscription");
     if (!sub) return;

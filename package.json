@@ -7,9 +7,13 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@cloudflare/workers-types": "^4.20250415.0",
     "typescript": "^5.7",
     "vitest": "^4.1.5",

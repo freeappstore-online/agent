@@ -1,12 +1,11 @@
-import type { ToolDef, ToolCall, ToolResult } from "./providers/types";
 import type { StoreConfig } from "./config";
+import type { ToolCall, ToolDef, ToolResult } from "./providers/types";
 
 /** File tools — identical across all stores */
 const FILE_TOOLS: ToolDef[] = [
   {
     name: "write_file",
-    description:
-      "Create or overwrite a file in the project. Path is relative to project root (e.g. 'web/src/App.tsx').",
+    description: "Create or overwrite a file in the project. Path is relative to project root (e.g. 'web/src/App.tsx').",
     parameters: {
       type: "object",
       properties: {
@@ -69,8 +68,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     // ── Deploy + infra tools (executed server-side by the session) ──
     {
       name: "deploy",
-      description:
-        `Full deploy: provision GitHub repo, CF Pages project, then push all project files. Use this for the FIRST deploy of a new ${noun}. Call only when the user explicitly asks to deploy.`,
+      description: `Full deploy: provision GitHub repo, CF Pages project, then push all project files. Use this for the FIRST deploy of a new ${noun}. Call only when the user explicitly asks to deploy.`,
       parameters: {
         type: "object",
         properties: {
@@ -86,8 +84,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "push_update",
-      description:
-        `Push updated files to an existing deployed ${noun}'s GitHub repo. Use this when the ${noun} is already deployed and the user wants to update it. Creates a new commit with changed files.`,
+      description: `Push updated files to an existing deployed ${noun}'s GitHub repo. Use this when the ${noun} is already deployed and the user wants to update it. Creates a new commit with changed files.`,
       parameters: {
         type: "object",
         properties: {
@@ -99,8 +96,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "check_deploy_status",
-      description:
-        `Check the deployment status of a ${noun} on Cloudflare Pages. Returns the latest deployment status and URL.`,
+      description: `Check the deployment status of a ${noun} on Cloudflare Pages. Returns the latest deployment status and URL.`,
       parameters: {
         type: "object",
         properties: {
@@ -111,14 +107,12 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: `list_deployed_${nounPlural}`,
-      description:
-        `List all ${nounPlural} currently deployed on ${storeName}. Returns ${noun} names, IDs, URLs, and categories from the store registry.`,
+      description: `List all ${nounPlural} currently deployed on ${storeName}. Returns ${noun} names, IDs, URLs, and categories from the store registry.`,
       parameters: { type: "object", properties: {} },
     },
     {
       name: "fetch_url",
-      description:
-        `Fetch a URL and return the response body. Useful for checking if a deployed ${noun} is live, reading remote files, or verifying URLs.`,
+      description: `Fetch a URL and return the response body. Useful for checking if a deployed ${noun} is live, reading remote files, or verifying URLs.`,
       parameters: {
         type: "object",
         properties: {
@@ -130,14 +124,12 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "run_compliance_check",
-      description:
-        `Run ${storeName} compliance checks against the current project files. Validates: MIT license, no tracking SDKs, brand fonts, CSS variables, HTML meta tags, PWA manifest, ${config.domain} link, pnpm workspace. Returns pass/fail for each check with details. Run this BEFORE deploying to catch issues early.`,
+      description: `Run ${storeName} compliance checks against the current project files. Validates: MIT license, no tracking SDKs, brand fonts, CSS variables, HTML meta tags, PWA manifest, ${config.domain} link, pnpm workspace. Returns pass/fail for each check with details. Run this BEFORE deploying to catch issues early.`,
       parameters: { type: "object", properties: {} },
     },
     {
       name: "get_build_logs",
-      description:
-        `Get the latest Cloudflare Pages build/deploy logs for a ${noun}. Use when a deploy fails or the ${noun} isn't working to see build errors, missing dependencies, or compilation failures.`,
+      description: `Get the latest Cloudflare Pages build/deploy logs for a ${noun}. Use when a deploy fails or the ${noun} isn't working to see build errors, missing dependencies, or compilation failures.`,
       parameters: {
         type: "object",
         properties: {
@@ -148,8 +140,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "get_ci_results",
-      description:
-        `Get GitHub Actions CI check results (compliance checks) for a ${noun}'s repo. Shows which checks passed/failed and error details. Use to diagnose compliance failures after pushing code.`,
+      description: `Get GitHub Actions CI check results (compliance checks) for a ${noun}'s repo. Shows which checks passed/failed and error details. Use to diagnose compliance failures after pushing code.`,
       parameters: {
         type: "object",
         properties: {
@@ -160,8 +151,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "get_audit_results",
-      description:
-        `Get quality audit results for a ${noun} from the ${storeName} auditor. Shows compliance score, viewport coverage, and any issues found. Use to understand what needs fixing for quality approval.`,
+      description: `Get quality audit results for a ${noun} from the ${storeName} auditor. Shows compliance score, viewport coverage, and any issues found. Use to understand what needs fixing for quality approval.`,
       parameters: {
         type: "object",
         properties: {
@@ -175,16 +165,18 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
 
 /** Infra tools that need env/network access — handled by the session DO */
 export const INFRA_TOOLS = new Set([
-  "deploy", "push_update", "check_deploy_status",
-  "list_deployed_apps", "list_deployed_games",
-  "fetch_url", "get_build_logs", "get_ci_results", "get_audit_results",
+  "deploy",
+  "push_update",
+  "check_deploy_status",
+  "list_deployed_apps",
+  "list_deployed_games",
+  "fetch_url",
+  "get_build_logs",
+  "get_ci_results",
+  "get_audit_results",
 ]);
 
-export function executeTool(
-  toolCall: ToolCall,
-  files: Map<string, string>,
-  config: StoreConfig,
-): ToolResult {
+export function executeTool(toolCall: ToolCall, files: Map<string, string>, config: StoreConfig): ToolResult {
   const { name, input, id } = toolCall;
 
   switch (name) {
@@ -218,7 +210,7 @@ export function executeTool(
     }
 
     case "search_files": {
-      const pattern = (input.pattern as string || "").toLowerCase();
+      const pattern = ((input.pattern as string) || "").toLowerCase();
       if (!pattern) return { id, content: "Error: pattern is required", isError: true };
       const matches: string[] = [];
       for (const [path, content] of files) {
@@ -261,7 +253,10 @@ function runComplianceCheck(files: Map<string, string>, config: StoreConfig): st
   const forbidden = /google-analytics|gtag|amplitude|mixpanel|segment|hotjar|plausible|posthog/i;
   let hasTracking = false;
   for (const [path, content] of files) {
-    if (path.startsWith("web/src/") && forbidden.test(content)) { hasTracking = true; break; }
+    if (path.startsWith("web/src/") && forbidden.test(content)) {
+      hasTracking = true;
+      break;
+    }
   }
   const webPkg = files.get("web/package.json") || "";
   if (forbidden.test(webPkg)) hasTracking = true;
@@ -292,7 +287,8 @@ function runComplianceCheck(files: Map<string, string>, config: StoreConfig): st
   const hasViewport = /viewport/.test(html);
   const hasTitle = /<title>/.test(html);
   if (hasLang && hasViewport && hasTitle) pass("HTML meta tags (lang, viewport, title)");
-  else fail("HTML meta tags", `Missing: ${[!hasLang && "lang", !hasViewport && "viewport", !hasTitle && "title"].filter(Boolean).join(", ")}`);
+  else
+    fail("HTML meta tags", `Missing: ${[!hasLang && "lang", !hasViewport && "viewport", !hasTitle && "title"].filter(Boolean).join(", ")}`);
 
   // PWA manifest
   const manifest = files.get("web/public/manifest.json") || "";
@@ -308,7 +304,10 @@ function runComplianceCheck(files: Map<string, string>, config: StoreConfig): st
   // Store link
   let hasStoreLink = false;
   for (const [path, content] of files) {
-    if (path.startsWith("web/src/") && content.includes(config.domain)) { hasStoreLink = true; break; }
+    if (path.startsWith("web/src/") && content.includes(config.domain)) {
+      hasStoreLink = true;
+      break;
+    }
   }
   if (hasStoreLink) pass(`${config.storeName} link in source`);
   else fail(`${config.storeName} link`, `No reference to ${config.domain} in web/src/`);
@@ -324,7 +323,10 @@ function runComplianceCheck(files: Map<string, string>, config: StoreConfig): st
     // Dark mode support (required for apps)
     let hasDarkMode = false;
     for (const [path, content] of files) {
-      if (path.startsWith("web/src/") && /prefers-color-scheme|data-theme|color-scheme/.test(content)) { hasDarkMode = true; break; }
+      if (path.startsWith("web/src/") && /prefers-color-scheme|data-theme|color-scheme/.test(content)) {
+        hasDarkMode = true;
+        break;
+      }
     }
     if (hasDarkMode) pass("Dark mode support");
     else fail("Dark mode", "No prefers-color-scheme, data-theme, or color-scheme in web/src/");
@@ -339,12 +341,15 @@ function runComplianceCheck(files: Map<string, string>, config: StoreConfig): st
   // No APPNAME placeholders
   let hasPlaceholder = false;
   for (const [, content] of files) {
-    if (/APPNAME/.test(content)) { hasPlaceholder = true; break; }
+    if (/APPNAME/.test(content)) {
+      hasPlaceholder = true;
+      break;
+    }
   }
   if (!hasPlaceholder) pass("No APPNAME placeholders");
   else fail("APPNAME placeholders", "Found unreplaced APPNAME placeholder in project files");
 
-  const passes = results.filter(r => r.startsWith("PASS")).length;
-  const fails = results.filter(r => r.startsWith("FAIL")).length;
+  const passes = results.filter((r) => r.startsWith("PASS")).length;
+  const fails = results.filter((r) => r.startsWith("FAIL")).length;
   return `Compliance: ${passes} pass, ${fails} fail\n\n${results.join("\n")}`;
 }

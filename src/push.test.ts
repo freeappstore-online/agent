@@ -1,18 +1,21 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
-import { sendWebPush, type PushSubscription } from "./push";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { type PushSubscription, sendWebPush } from "./push";
 
 // Generate a test VAPID key pair at runtime — never commit real keys
 let VAPID_PUBLIC: string;
 let VAPID_PRIVATE: string;
 
 function b64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
 
 beforeAll(async () => {
   const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]);
   const pubRaw = new Uint8Array(await crypto.subtle.exportKey("raw", kp.publicKey));
-  const privJwk = await crypto.subtle.exportKey("jwk", kp.privateKey) as JsonWebKey;
+  const privJwk = (await crypto.subtle.exportKey("jwk", kp.privateKey)) as JsonWebKey;
   VAPID_PUBLIC = b64url(pubRaw);
   VAPID_PRIVATE = privJwk.d!;
 });
@@ -134,4 +137,3 @@ describe("sendWebPush — no payload", () => {
     }
   });
 });
-

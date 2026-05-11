@@ -1,4 +1,4 @@
-import type { ProviderAdapter, Message, ToolDef, StreamEvent, ToolCall } from "./types";
+import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class GoogleAdapter implements ProviderAdapter {
   constructor(
@@ -8,11 +8,7 @@ export class GoogleAdapter implements ProviderAdapter {
     private maxTokens: number = 16384,
   ) {}
 
-  async *run(
-    systemPrompt: string,
-    messages: Message[],
-    tools: ToolDef[],
-  ): AsyncGenerator<StreamEvent> {
+  async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent> {
     const body: Record<string, unknown> = {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: toGoogleContents(messages),

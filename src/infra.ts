@@ -1,7 +1,7 @@
 /** Infra query tools — read-only operations against GitHub, CF, and audit APIs. */
 
-import type { DeployEnv } from "./deploy";
 import type { StoreConfig } from "./config";
+import type { DeployEnv } from "./deploy";
 
 function makeGhApi(token: string, agentName: string) {
   return async (path: string) => {
@@ -17,7 +17,7 @@ function makeGhApi(token: string, agentName: string) {
   };
 }
 
-async function cfApi(token: string, accountId: string, path: string) {
+async function cfApi(token: string, _accountId: string, path: string) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
   });
@@ -28,7 +28,8 @@ async function cfApi(token: string, accountId: string, path: string) {
 export async function checkDeployStatus(appId: string, env: DeployEnv, config: StoreConfig): Promise<string> {
   const cfProject = config.cfProjectName(appId);
   const res = await cfApi(
-    env.CF_API_TOKEN, env.CF_ACCOUNT_ID,
+    env.CF_API_TOKEN,
+    env.CF_ACCOUNT_ID,
     `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
   );
   if (!res.success || !res.result?.length) {
@@ -68,7 +69,8 @@ export async function fetchUrl(url: string, method: string, agentName: string): 
 export async function getBuildLogs(appId: string, env: DeployEnv, config: StoreConfig): Promise<string> {
   const cfProject = config.cfProjectName(appId);
   const deps = await cfApi(
-    env.CF_API_TOKEN, env.CF_ACCOUNT_ID,
+    env.CF_API_TOKEN,
+    env.CF_ACCOUNT_ID,
     `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
   );
   if (!deps.success || !deps.result?.length) return `No deployments found for ${cfProject}.`;
@@ -98,7 +100,7 @@ export async function getCIResults(appId: string, env: DeployEnv, config: StoreC
     let detail = "";
     if (r.output?.summary) detail = r.output.summary.slice(0, 200);
     else if (r.output?.text) detail = r.output.text.slice(0, 200);
-    return `${status === "success" ? "PASS" : status === "failure" ? "FAIL" : status.toUpperCase()}: ${r.name}${detail ? " — " + detail : ""}`;
+    return `${status === "success" ? "PASS" : status === "failure" ? "FAIL" : status.toUpperCase()}: ${r.name}${detail ? ` — ${detail}` : ""}`;
   });
 
   return `CI results for ${repo} (${runs.check_runs.length} checks):\n${results.join("\n")}`;
@@ -119,7 +121,7 @@ export async function getAuditResults(appId: string, config: StoreConfig): Promi
       if (data.checks) {
         for (const c of data.checks) {
           const icon = c.status === "pass" ? "PASS" : c.status === "warn" ? "WARN" : "FAIL";
-          lines.push(`  ${icon}: ${c.name}${c.detail ? " — " + c.detail : ""}`);
+          lines.push(`  ${icon}: ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
         }
       }
       return lines.join("\n");

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getConfig } from "./config";
-import { getTemplateFiles, getSystemPrompt } from "./template";
+import { getSystemPrompt, getTemplateFiles } from "./template";
 
 const appsConfig = getConfig("apps");
 const gamesConfig = getConfig("games");
@@ -62,11 +62,11 @@ describe("getTemplateFiles", () => {
   });
 
   it("apps LICENSE says FreeAppStore", () => {
-    expect(appsFiles["LICENSE"]).toContain("FreeAppStore");
+    expect(appsFiles.LICENSE).toContain("FreeAppStore");
   });
 
   it("games LICENSE says FreeGameStore", () => {
-    expect(gamesFiles["LICENSE"]).toContain("FreeGameStore");
+    expect(gamesFiles.LICENSE).toContain("FreeGameStore");
   });
 
   it("shared files are identical between stores", () => {

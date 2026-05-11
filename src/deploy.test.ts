@@ -1,11 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getConfig } from "./config";
-
 // We can't import deployApp/pushUpdate directly (they make real API calls)
 // but we can test the makeGhApi pattern and the deploy flow logic by
 // testing executeInfraTool which wraps them.
 import { executeInfraTool } from "./infra-exec";
-import type { DeployStatus } from "./deploy";
 
 const appsConfig = getConfig("apps");
 const gamesConfig = getConfig("games");
@@ -33,7 +31,11 @@ describe("deploy uniqueness — apps", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: 1 }) }) as any;
 
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "taken-app", name: "Taken", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "taken-app", name: "Taken", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("already taken");
@@ -42,13 +44,18 @@ describe("deploy uniqueness — apps", () => {
   it("allows deploy when repo does not exist (HTTP 404)", async () => {
     // First call: uniqueness check (404 = not taken)
     // Subsequent calls: deploy flow (will fail but that's fine — we just check it gets past uniqueness)
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       .mockResolvedValueOnce({ status: 404, json: () => Promise.resolve({ message: "Not Found" }) }) // uniqueness check
       .mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: null, message: "error" }) }); // deploy calls fail
     globalThis.fetch = mockFetch as any;
 
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "new-app", name: "New", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "new-app", name: "New", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     // Should NOT contain "already taken" — it passed uniqueness check
@@ -62,7 +69,11 @@ describe("deploy uniqueness — apps", () => {
     globalThis.fetch = mockFetch as any;
 
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "my-app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "my-app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: "my-app", files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     // Should NOT contain "already taken" — uniqueness check was skipped
@@ -75,7 +86,11 @@ describe("deploy uniqueness — games", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: 1 }) }) as any;
 
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "taken-game", name: "Taken", category: "arcade", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "taken-game", name: "Taken", category: "arcade", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: gamesConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("already taken");
@@ -87,7 +102,11 @@ describe("deploy uniqueness — games", () => {
 describe("deploy ID validation edge cases", () => {
   it("rejects ID with spaces", async () => {
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "my app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "my app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("invalid");
@@ -95,7 +114,11 @@ describe("deploy ID validation edge cases", () => {
 
   it("rejects ID with uppercase", async () => {
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "MyApp", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "MyApp", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("invalid");
@@ -103,7 +126,11 @@ describe("deploy ID validation edge cases", () => {
 
   it("rejects ID starting with hyphen", async () => {
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "-my-app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "-my-app", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("invalid");
@@ -111,7 +138,11 @@ describe("deploy ID validation edge cases", () => {
 
   it("rejects ID ending with hyphen", async () => {
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "my-app-", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "my-app-", name: "My App", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("invalid");
@@ -119,24 +150,38 @@ describe("deploy ID validation edge cases", () => {
 
   it("rejects ID over 58 chars", async () => {
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "a".repeat(59), name: "Long", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "a".repeat(59), name: "Long", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).toContain("invalid");
   });
 
   it("allows valid ID with hyphens and numbers", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({ status: 404 }).mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: null }) }) as any;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 404 })
+      .mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: null }) }) as any;
 
     const result = await executeInfraTool(
-      { id: "1", name: "deploy", input: { id: "my-cool-app-2", name: "Cool", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },
+      {
+        id: "1",
+        name: "deploy",
+        input: { id: "my-cool-app-2", name: "Cool", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
+      },
       { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
     );
     expect(result).not.toContain("invalid");
   });
 
   it("allows single character ID", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({ status: 404 }).mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: null }) }) as any;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 404 })
+      .mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: null }) }) as any;
 
     const result = await executeInfraTool(
       { id: "1", name: "deploy", input: { id: "x", name: "X", category: "utilities", icon: "x", iconBg: "#fff", description: "test" } },

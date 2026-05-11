@@ -1,4 +1,4 @@
-import type { ProviderAdapter, Message, ToolDef, StreamEvent, ToolCall } from "./types";
+import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class AnthropicAdapter implements ProviderAdapter {
   constructor(
@@ -8,11 +8,7 @@ export class AnthropicAdapter implements ProviderAdapter {
     private maxTokens: number = 16384,
   ) {}
 
-  async *run(
-    systemPrompt: string,
-    messages: Message[],
-    tools: ToolDef[],
-  ): AsyncGenerator<StreamEvent> {
+  async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent> {
     const body: Record<string, unknown> = {
       model: this.model,
       max_tokens: this.maxTokens,
@@ -120,7 +116,9 @@ async function* parseAnthropicSSE(body: ReadableStream): AsyncGenerator<StreamEv
             let input: Record<string, unknown> = {};
             try {
               input = JSON.parse(tc.jsonBuf);
-            } catch { /* empty */ }
+            } catch {
+              /* empty */
+            }
             const call: ToolCall = { id: tc.id, name: tc.name, input };
             yield { type: "tool_call", data: JSON.stringify(call) };
             toolCalls.delete(evt.index);

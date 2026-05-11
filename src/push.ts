@@ -10,11 +10,7 @@ export interface PushSubscription {
  * predefined message when it receives the push event.
  * Returns true on success (HTTP 201), false on failure.
  */
-export async function sendWebPush(
-  subscription: PushSubscription,
-  vapidPublicKey: string,
-  vapidPrivateKey: string,
-): Promise<boolean> {
+export async function sendWebPush(subscription: PushSubscription, vapidPublicKey: string, vapidPrivateKey: string): Promise<boolean> {
   const url = new URL(subscription.endpoint);
   const audience = `${url.protocol}//${url.host}`;
   const jwt = await createVapidJWT(audience, vapidPublicKey, vapidPrivateKey);
@@ -33,18 +29,16 @@ export async function sendWebPush(
 
 // ── VAPID JWT ──
 
-async function createVapidJWT(
-  audience: string,
-  publicKey: string,
-  privateKey: string,
-): Promise<string> {
+async function createVapidJWT(audience: string, publicKey: string, privateKey: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const jwtHeader = b64url(JSON.stringify({ typ: "JWT", alg: "ES256" }));
-  const jwtPayload = b64url(JSON.stringify({
-    aud: audience,
-    exp: now + 86400,
-    sub: "mailto:noreply@freeappstore.online",
-  }));
+  const jwtPayload = b64url(
+    JSON.stringify({
+      aud: audience,
+      exp: now + 86400,
+      sub: "mailto:noreply@freeappstore.online",
+    }),
+  );
   const unsigned = `${jwtHeader}.${jwtPayload}`;
 
   const pubBytes = b64urlDecode(publicKey);
@@ -56,14 +50,9 @@ async function createVapidJWT(
     d: privateKey,
   };
 
-  const key = await crypto.subtle.importKey(
-    "jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"],
-  );
+  const key = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
 
-  const sig = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" }, key,
-    new TextEncoder().encode(unsigned),
-  );
+  const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(unsigned));
 
   return `${unsigned}.${b64urlEncode(new Uint8Array(sig))}`;
 }
@@ -75,9 +64,12 @@ function b64url(str: string): string {
 }
 
 function b64urlEncode(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
 
 function b64urlDecode(str: string): Uint8Array {
-  return Uint8Array.from(atob(str.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  return Uint8Array.from(atob(str.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 }

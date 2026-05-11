@@ -42,11 +42,7 @@ export interface StreamEvent {
 /** What the provider adapter must implement */
 export interface ProviderAdapter {
   /** Run one turn of the agent loop. Yields StreamEvents. */
-  run(
-    systemPrompt: string,
-    messages: Message[],
-    tools: ToolDef[],
-  ): AsyncGenerator<StreamEvent>;
+  run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent>;
 }
 
 export interface Message {

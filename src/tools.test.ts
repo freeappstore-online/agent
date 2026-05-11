@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getConfig } from "./config";
-import { getToolDefinitions, INFRA_TOOLS, executeTool } from "./tools";
 import { getTemplateFiles } from "./template";
+import { executeTool, getToolDefinitions, INFRA_TOOLS } from "./tools";
 
 const appsConfig = getConfig("apps");
 const gamesConfig = getConfig("games");
@@ -94,27 +94,15 @@ describe("INFRA_TOOLS", () => {
 describe("executeTool — file tools", () => {
   it("write_file and read_file round-trip", () => {
     const files = new Map<string, string>();
-    const write = executeTool(
-      { id: "1", name: "write_file", input: { path: "test.txt", content: "hello" } },
-      files,
-      appsConfig,
-    );
+    const write = executeTool({ id: "1", name: "write_file", input: { path: "test.txt", content: "hello" } }, files, appsConfig);
     expect(write.content).toContain("Wrote test.txt");
-    const read = executeTool(
-      { id: "2", name: "read_file", input: { path: "test.txt" } },
-      files,
-      appsConfig,
-    );
+    const read = executeTool({ id: "2", name: "read_file", input: { path: "test.txt" } }, files, appsConfig);
     expect(read.content).toBe("hello");
   });
 
   it("read_file errors on missing file", () => {
     const files = new Map<string, string>();
-    const result = executeTool(
-      { id: "1", name: "read_file", input: { path: "nope.txt" } },
-      files,
-      appsConfig,
-    );
+    const result = executeTool({ id: "1", name: "read_file", input: { path: "nope.txt" } }, files, appsConfig);
     expect(result.isError).toBe(true);
   });
 
@@ -125,18 +113,17 @@ describe("executeTool — file tools", () => {
   });
 
   it("list_files returns sorted paths", () => {
-    const files = new Map([["b.txt", ""], ["a.txt", ""]]);
+    const files = new Map([
+      ["b.txt", ""],
+      ["a.txt", ""],
+    ]);
     const result = executeTool({ id: "1", name: "list_files", input: {} }, files, appsConfig);
     expect(result.content).toBe("a.txt\nb.txt");
   });
 
   it("search_files finds matches", () => {
     const files = new Map([["a.txt", "hello world\nfoo bar"]]);
-    const result = executeTool(
-      { id: "1", name: "search_files", input: { pattern: "foo" } },
-      files,
-      appsConfig,
-    );
+    const result = executeTool({ id: "1", name: "search_files", input: { pattern: "foo" } }, files, appsConfig);
     expect(result.content).toContain("a.txt:2:");
   });
 });
@@ -144,11 +131,7 @@ describe("executeTool — file tools", () => {
 describe("run_compliance_check", () => {
   it("apps template passes apps compliance (except APPNAME + Fraunces)", () => {
     const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
-    const result = executeTool(
-      { id: "1", name: "run_compliance_check", input: {} },
-      files,
-      appsConfig,
-    );
+    const result = executeTool({ id: "1", name: "run_compliance_check", input: {} }, files, appsConfig);
     expect(result.content).toContain("PASS: MIT License");
     expect(result.content).toContain("PASS: CSS variables (--paper, --ink, --accent)");
     expect(result.content).toContain("PASS: Dark mode support");
@@ -164,11 +147,7 @@ describe("run_compliance_check", () => {
 
   it("games template passes games compliance (except APPNAME + Fraunces)", () => {
     const files = new Map(Object.entries(getTemplateFiles(gamesConfig)));
-    const result = executeTool(
-      { id: "1", name: "run_compliance_check", input: {} },
-      files,
-      gamesConfig,
-    );
+    const result = executeTool({ id: "1", name: "run_compliance_check", input: {} }, files, gamesConfig);
     expect(result.content).toContain("PASS: MIT License");
     expect(result.content).toContain("PASS: CSS variables (--bg, --ink, --accent)");
     expect(result.content).toContain("PASS: Overflow hidden");
@@ -182,22 +161,14 @@ describe("run_compliance_check", () => {
 
   it("apps template would fail games compliance (--bg)", () => {
     const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
-    const result = executeTool(
-      { id: "1", name: "run_compliance_check", input: {} },
-      files,
-      gamesConfig,
-    );
+    const result = executeTool({ id: "1", name: "run_compliance_check", input: {} }, files, gamesConfig);
     expect(result.content).toContain("FAIL: CSS variables");
     expect(result.content).toContain("FAIL: Overflow hidden");
   });
 
   it("games template would fail apps compliance (--paper)", () => {
     const files = new Map(Object.entries(getTemplateFiles(gamesConfig)));
-    const result = executeTool(
-      { id: "1", name: "run_compliance_check", input: {} },
-      files,
-      appsConfig,
-    );
+    const result = executeTool({ id: "1", name: "run_compliance_check", input: {} }, files, appsConfig);
     expect(result.content).toContain("FAIL: CSS variables");
     expect(result.content).toContain("FAIL: FreeAppStore link");
   });
@@ -205,11 +176,7 @@ describe("run_compliance_check", () => {
   it("detects APPNAME placeholders", () => {
     const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
     // Template files still have APPNAME (they're replaced at deploy time)
-    const result = executeTool(
-      { id: "1", name: "run_compliance_check", input: {} },
-      files,
-      appsConfig,
-    );
+    const result = executeTool({ id: "1", name: "run_compliance_check", input: {} }, files, appsConfig);
     expect(result.content).toContain("FAIL: APPNAME placeholders");
   });
 });
