@@ -1,6 +1,7 @@
 {
   "name": "freeappstore-agent",
   "private": true,
+  "packageManager": "pnpm@10.30.3",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
