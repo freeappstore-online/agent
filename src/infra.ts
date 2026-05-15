@@ -54,10 +54,14 @@ export async function listDeployed(env: DeployEnv, config: StoreConfig): Promise
   return items.map((a: any) => `${a.id} — ${a.name} (${a.category}) ${a.appUrl}`).join("\n");
 }
 
-/** Fetch a URL and return the response. */
+/** Fetch a URL and return the response. Redirects are not followed to prevent SSRF bypass. */
 export async function fetchUrl(url: string, method: string, agentName: string): Promise<string> {
   try {
-    const res = await fetch(url, { method, headers: { "User-Agent": agentName } });
+    const res = await fetch(url, { method, headers: { "User-Agent": agentName }, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("Location") || "(none)";
+      return `${res.status} Redirect → ${location}\n(Redirects are not followed for security.)`;
+    }
     const body = await res.text();
     return `${res.status} ${res.statusText}\n${body.slice(0, 2000)}`;
   } catch (err) {

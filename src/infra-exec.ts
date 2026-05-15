@@ -21,7 +21,7 @@ export async function executeInfraTool(tc: ToolCall, ctx: ExecContext): Promise<
 
   // Authorization: scope write tools to the session's own item
   const targetId = tc.input.id as string | undefined;
-  if (targetId && ["push_update", "get_build_logs", "get_ci_results", "check_deploy_status"].includes(tc.name)) {
+  if (targetId && ["push_update", "get_build_logs", "get_ci_results", "check_deploy_status", "get_audit_results"].includes(tc.name)) {
     if (!ctx.appId) return `Error: no ${config.noun} deployed yet. Deploy first before using ${tc.name}.`;
     if (targetId !== ctx.appId)
       return `Error: you can only ${tc.name} on your own ${config.noun} "${ctx.appId}". No access to "${targetId}".`;

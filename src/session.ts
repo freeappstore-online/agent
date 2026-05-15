@@ -29,6 +29,8 @@ interface SessionState {
   appId: string | null;
   appName: string | null;
   errors: ErrorEntry[];
+  ownerId: string | null;
+  tokenHash: string | null;
 }
 
 export class AgentSession implements DurableObject {
@@ -57,11 +59,15 @@ export class AgentSession implements DurableObject {
         appId: null,
         appName: null,
         errors: [],
+        ownerId: null,
+        tokenHash: null,
       };
       await this.save();
     }
-    // Migrate old sessions without errors field
+    // Migrate old sessions
     if (!this.session.errors) this.session.errors = [];
+    if (this.session.ownerId === undefined) this.session.ownerId = null;
+    if (this.session.tokenHash === undefined) this.session.tokenHash = null;
     return this.session;
   }
 
@@ -69,6 +75,52 @@ export class AgentSession implements DurableObject {
     if (this.session) {
       await this.state.storage.put("session", this.session);
     }
+  }
+
+  /** Validate Bearer token, bind session to user on first authenticated call. */
+  private async validateAuth(request: Request, requireAuth: boolean): Promise<{ userId: string | null; error: Response | null }> {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      if (requireAuth) {
+        return { userId: null, error: json({ error: "Authorization required" }, 401, request, this.config.domain) };
+      }
+      return { userId: null, error: null };
+    }
+
+    const token = authHeader.slice(7);
+    const session = await this.load();
+
+    // If we already have an owner and the token hash matches, skip remote validation
+    if (session.ownerId && session.tokenHash) {
+      const hash = await hashToken(token);
+      if (hash === session.tokenHash) {
+        return { userId: session.ownerId, error: null };
+      }
+    }
+
+    // Validate token against the platform API
+    const res = await fetch("https://api.freeappstore.online/v1/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      return { userId: null, error: json({ error: "Invalid auth token" }, 401, request, this.config.domain) };
+    }
+
+    const user = (await res.json()) as { id: string; login: string };
+
+    if (session.ownerId && session.ownerId !== user.id) {
+      return { userId: null, error: json({ error: "Session belongs to another user" }, 403, request, this.config.domain) };
+    }
+
+    // Bind session to this user on first authenticated call
+    if (!session.ownerId) {
+      session.ownerId = user.id;
+      session.tokenHash = await hashToken(token);
+      await this.save();
+    }
+
+    return { userId: user.id, error: null };
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -80,6 +132,11 @@ export class AgentSession implements DurableObject {
     }
 
     try {
+      // Require auth on all endpoints that expose session data; only /status is public
+      const isPublic = path === "/status";
+      const auth = await this.validateAuth(request, !isPublic);
+      if (auth.error) return auth.error;
+
       if (path === "/chat" && request.method === "POST") {
         return this.handleChat(request);
       }
@@ -110,6 +167,12 @@ export class AgentSession implements DurableObject {
 
   /** POST /chat — stream an agent turn via SSE */
   private async handleChat(request: Request): Promise<Response> {
+    // Reject oversized bodies before parsing
+    const contentLength = parseInt(request.headers.get("Content-Length") || "0");
+    if (contentLength > 200_000) {
+      return json({ error: "Request too large (max 200KB)" }, 413, request, this.config.domain);
+    }
+
     const body = await request.json<{
       message: string;
       aiConfig: AIConfig;
@@ -122,6 +185,16 @@ export class AgentSession implements DurableObject {
         request,
         this.config.domain,
       );
+    }
+
+    const validProviders = ["anthropic", "openai", "google", "github"];
+    if (!validProviders.includes(body.aiConfig.provider)) {
+      return json({ error: `Invalid provider. Use: ${validProviders.join(", ")}` }, 400, request, this.config.domain);
+    }
+
+    // Truncate message to prevent storage abuse
+    if (body.message.length > 50_000) {
+      body.message = body.message.slice(0, 50_000);
     }
 
     const session = await this.load();
@@ -144,11 +217,16 @@ export class AgentSession implements DurableObject {
 
     const config = this.config;
 
+    // Scrub the user's API key from any error messages before streaming
+    const apiKey = body.aiConfig.apiKey;
+    const scrubKey = (s: string) => apiKey && apiKey.length > 8 ? s.replaceAll(apiKey, "[REDACTED]") : s;
+
     // Run the agent in the background
     (async () => {
       const encoder = new TextEncoder();
       const sendSSE = (evt: { type: string; data: string }) => {
-        writer.write(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`)).catch(() => {});
+        const safe = evt.type === "error" ? { ...evt, data: scrubKey(evt.data) } : evt;
+        writer.write(encoder.encode(`data: ${JSON.stringify(safe)}\n\n`)).catch(() => {});
       };
 
       try {
@@ -235,7 +313,7 @@ export class AgentSession implements DurableObject {
 
         sendSSE({ type: "done", data: "" });
       } catch (err) {
-        this.logError("chat", String(err));
+        this.logError("chat", scrubKey(String(err)));
         sendSSE({ type: "error", data: String(err) });
       } finally {
         writer.close().catch(() => {});
@@ -325,6 +403,8 @@ export class AgentSession implements DurableObject {
 
   /** POST /reset — start over */
   private async handleReset(request: Request): Promise<Response> {
+    const prevOwnerId = this.session?.ownerId ?? null;
+    const prevTokenHash = this.session?.tokenHash ?? null;
     this.session = {
       messages: [],
       files: { ...getTemplateFiles(this.config) },
@@ -333,6 +413,8 @@ export class AgentSession implements DurableObject {
       appId: null,
       appName: null,
       errors: [],
+      ownerId: prevOwnerId,
+      tokenHash: prevTokenHash,
     };
     await this.save();
     return json({ ok: true }, 200, request, this.config.domain);
@@ -361,6 +443,11 @@ export class AgentSession implements DurableObject {
   }
 }
 
+async function hashToken(token: string): Promise<string> {
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function corsHeaders(request: Request, domain: string): Record<string, string> {
   const origin = request.headers.get("Origin");
   const allowed =
@@ -374,7 +461,7 @@ function corsHeaders(request: Request, domain: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Credentials": "true",
   };
 }

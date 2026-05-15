@@ -184,6 +184,9 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
       const path = input.path as string;
       const content = input.content as string;
       if (!path) return { id, content: "Error: path is required", isError: true };
+      if (path.includes("..") || path.startsWith("/") || path.startsWith(".github/")) {
+        return { id, content: `Error: path "${path}" is not allowed. No "..", absolute paths, or .github/ files.`, isError: true };
+      }
       files.set(path, content);
       return { id, content: `Wrote ${path} (${content.length} bytes)` };
     }
