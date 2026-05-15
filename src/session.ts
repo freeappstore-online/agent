@@ -179,9 +179,7 @@ export class AgentSession implements DurableObject {
     if (this.chatInProgress) {
       return json({ error: "A chat request is already in progress. Wait for it to finish." }, 429, request, this.config.domain);
     }
-    this.chatInProgress = true;
-
-    // Reject oversized bodies before parsing
+    // Validate BEFORE setting chatInProgress (early returns must not lock the session)
     const contentLength = parseInt(request.headers.get("Content-Length") || "0");
     if (contentLength > 200_000) {
       return json({ error: "Request too large (max 200KB)" }, 413, request, this.config.domain);
@@ -210,6 +208,9 @@ export class AgentSession implements DurableObject {
     if (body.message.length > 50_000) {
       body.message = body.message.slice(0, 50_000);
     }
+
+    // All validation passed — lock the session for this chat turn
+    this.chatInProgress = true;
 
     const session = await this.load();
     const files = new Map(Object.entries(session.files));
@@ -442,6 +443,18 @@ export class AgentSession implements DurableObject {
     const sub = await request.json<PushSubscription>();
     if (!sub.endpoint) {
       return json({ error: "endpoint required" }, 400, request, this.config.domain);
+    }
+    // Validate push endpoint is a known push service (prevents SSRF via push notifications)
+    try {
+      const host = new URL(sub.endpoint).hostname;
+      const allowed = host.endsWith(".push.services.mozilla.com") || host.endsWith(".google.com") ||
+        host.endsWith(".googleapis.com") || host.endsWith(".windows.com") || host.endsWith(".push.apple.com") ||
+        host.endsWith(".web.push.apple.com") || host.endsWith(".notify.windows.com");
+      if (!allowed) {
+        return json({ error: "Invalid push endpoint domain" }, 400, request, this.config.domain);
+      }
+    } catch {
+      return json({ error: "Invalid push endpoint URL" }, 400, request, this.config.domain);
     }
     await this.state.storage.put("pushSubscription", sub);
     return json({ ok: true }, 200, request, this.config.domain);
