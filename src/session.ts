@@ -234,13 +234,13 @@ export class AgentSession implements DurableObject {
 
     // Scrub the user's API key from any error messages before streaming
     const apiKey = body.aiConfig.apiKey;
-    const scrubKey = (s: string) => apiKey && apiKey.length > 8 ? s.replaceAll(apiKey, "[REDACTED]") : s;
+    const scrubKey = (s: string) => (apiKey && apiKey.length > 8 ? s.replaceAll(apiKey, "[REDACTED]") : s);
 
     // Run the agent in the background
     (async () => {
       const encoder = new TextEncoder();
       const sendSSE = (evt: { type: string; data: string }) => {
-        const safe = (evt.type === "error" || evt.type === "text") ? { ...evt, data: scrubKey(evt.data) } : evt;
+        const safe = evt.type === "error" || evt.type === "text" ? { ...evt, data: scrubKey(evt.data) } : evt;
         writer.write(encoder.encode(`data: ${JSON.stringify(safe)}\n\n`)).catch(() => {});
       };
 
@@ -263,7 +263,9 @@ export class AgentSession implements DurableObject {
         const fileKeys = Object.keys(files);
         if (fileKeys.length > MAX_FILES) {
           const keep = new Set(fileKeys.slice(-MAX_FILES));
-          for (const k of fileKeys) { if (!keep.has(k)) files.delete(k); }
+          for (const k of fileKeys) {
+            if (!keep.has(k)) files.delete(k);
+          }
         }
         session.files = Object.fromEntries(files);
         await this.save();
@@ -447,9 +449,14 @@ export class AgentSession implements DurableObject {
     // Validate push endpoint is a known push service (prevents SSRF via push notifications)
     try {
       const host = new URL(sub.endpoint).hostname;
-      const allowed = host.endsWith(".push.services.mozilla.com") || host.endsWith(".google.com") ||
-        host.endsWith(".googleapis.com") || host.endsWith(".windows.com") || host.endsWith(".push.apple.com") ||
-        host.endsWith(".web.push.apple.com") || host.endsWith(".notify.windows.com");
+      const allowed =
+        host.endsWith(".push.services.mozilla.com") ||
+        host.endsWith(".google.com") ||
+        host.endsWith(".googleapis.com") ||
+        host.endsWith(".windows.com") ||
+        host.endsWith(".push.apple.com") ||
+        host.endsWith(".web.push.apple.com") ||
+        host.endsWith(".notify.windows.com");
       if (!allowed) {
         return json({ error: "Invalid push endpoint domain" }, 400, request, this.config.domain);
       }
@@ -475,7 +482,9 @@ export class AgentSession implements DurableObject {
 
 async function hashToken(token: string): Promise<string> {
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function corsHeaders(request: Request, domain: string): Record<string, string> {

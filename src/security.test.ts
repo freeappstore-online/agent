@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { getConfig } from "./config";
+import type { DeployStatus } from "./deploy";
 import { executeInfraTool } from "./infra-exec";
 import { executeTool } from "./tools";
-import type { DeployStatus } from "./deploy";
 
 const appsConfig = getConfig("apps");
 
@@ -41,13 +41,21 @@ describe("Security: write_file path validation", () => {
   });
 
   it("blocks .github/workflows injection", () => {
-    const r = executeTool({ id: "1", name: "write_file", input: { path: ".github/workflows/evil.yml", content: "on: push" } }, files, appsConfig);
+    const r = executeTool(
+      { id: "1", name: "write_file", input: { path: ".github/workflows/evil.yml", content: "on: push" } },
+      files,
+      appsConfig,
+    );
     expect(r.isError).toBe(true);
     expect(r.content).toContain("not allowed");
   });
 
   it("blocks .github/ directory entirely", () => {
-    const r = executeTool({ id: "1", name: "write_file", input: { path: ".github/CODEOWNERS", content: "* @attacker" } }, files, appsConfig);
+    const r = executeTool(
+      { id: "1", name: "write_file", input: { path: ".github/CODEOWNERS", content: "* @attacker" } },
+      files,
+      appsConfig,
+    );
     expect(r.isError).toBe(true);
   });
 
@@ -58,7 +66,11 @@ describe("Security: write_file path validation", () => {
   });
 
   it("allows normal web/ paths", () => {
-    const r = executeTool({ id: "1", name: "write_file", input: { path: "web/src/App.tsx", content: "export default () => <div/>" } }, files, appsConfig);
+    const r = executeTool(
+      { id: "1", name: "write_file", input: { path: "web/src/App.tsx", content: "export default () => <div/>" } },
+      files,
+      appsConfig,
+    );
     expect(r.isError).toBeFalsy();
     expect(r.content).toContain("Wrote");
   });
@@ -135,7 +147,10 @@ describe("Security: fetch_url SSRF prevention", () => {
 
   it("blocks auth exchange endpoint", async () => {
     const ctx = makeCtx();
-    const r = await executeInfraTool({ id: "1", name: "fetch_url", input: { url: "https://api.freeappstore.online/v1/auth/exchange" } }, ctx);
+    const r = await executeInfraTool(
+      { id: "1", name: "fetch_url", input: { url: "https://api.freeappstore.online/v1/auth/exchange" } },
+      ctx,
+    );
     expect(r).toContain("Error");
   });
 
@@ -252,7 +267,11 @@ describe("Security: deploy ID validation", () => {
     try {
       const ctx = makeCtx();
       const r = await executeInfraTool(
-        { id: "1", name: "deploy", input: { id: "my-cool-app", name: "Cool", category: "utilities", icon: "📱", iconBg: "#fff", description: "test" } },
+        {
+          id: "1",
+          name: "deploy",
+          input: { id: "my-cool-app", name: "Cool", category: "utilities", icon: "📱", iconBg: "#fff", description: "test" },
+        },
         ctx,
       );
       // Passes ID validation, hits uniqueness check (mocked to "exists")

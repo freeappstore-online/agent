@@ -4,5 +4,10 @@ export default defineConfig({
     environment: "node",
     reporters: ["default", "json"],
     outputFile: { json: "test-results/results.json" },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary"],
+      reportsDirectory: "./test-results/coverage",
+    },
   },
 });
