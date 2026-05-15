@@ -31,7 +31,10 @@ interface SessionState {
   errors: ErrorEntry[];
   ownerId: string | null;
   tokenHash: string | null;
+  tokenValidatedAt: number | null;
 }
+
+const TOKEN_REVALIDATE_MS = 30 * 60 * 1000; // Re-verify token every 30 min
 
 export class AgentSession implements DurableObject {
   private state: DurableObjectState;
@@ -62,6 +65,7 @@ export class AgentSession implements DurableObject {
         errors: [],
         ownerId: null,
         tokenHash: null,
+        tokenValidatedAt: null,
       };
       await this.save();
     }
@@ -69,6 +73,7 @@ export class AgentSession implements DurableObject {
     if (!this.session.errors) this.session.errors = [];
     if (this.session.ownerId === undefined) this.session.ownerId = null;
     if (this.session.tokenHash === undefined) this.session.tokenHash = null;
+    if (this.session.tokenValidatedAt === undefined) this.session.tokenValidatedAt = null;
     return this.session;
   }
 
@@ -91,11 +96,15 @@ export class AgentSession implements DurableObject {
     const token = authHeader.slice(7);
     const session = await this.load();
 
-    // If we already have an owner and the token hash matches, skip remote validation
+    // If we already have an owner and the token hash matches, check TTL
     if (session.ownerId && session.tokenHash) {
       const hash = await hashToken(token);
       if (hash === session.tokenHash) {
-        return { userId: session.ownerId, error: null };
+        const age = session.tokenValidatedAt ? Date.now() - session.tokenValidatedAt : Infinity;
+        if (age < TOKEN_REVALIDATE_MS) {
+          return { userId: session.ownerId, error: null };
+        }
+        // TTL expired — fall through to re-validate
       }
     }
 
@@ -114,12 +123,11 @@ export class AgentSession implements DurableObject {
       return { userId: null, error: json({ error: "Session belongs to another user" }, 403, request, this.config.domain) };
     }
 
-    // Bind session to this user on first authenticated call
-    if (!session.ownerId) {
-      session.ownerId = user.id;
-      session.tokenHash = await hashToken(token);
-      await this.save();
-    }
+    // Bind or refresh session auth
+    session.ownerId = user.id;
+    session.tokenHash = await hashToken(token);
+    session.tokenValidatedAt = Date.now();
+    await this.save();
 
     return { userId: user.id, error: null };
   }
@@ -231,7 +239,7 @@ export class AgentSession implements DurableObject {
     (async () => {
       const encoder = new TextEncoder();
       const sendSSE = (evt: { type: string; data: string }) => {
-        const safe = evt.type === "error" ? { ...evt, data: scrubKey(evt.data) } : evt;
+        const safe = (evt.type === "error" || evt.type === "text") ? { ...evt, data: scrubKey(evt.data) } : evt;
         writer.write(encoder.encode(`data: ${JSON.stringify(safe)}\n\n`)).catch(() => {});
       };
 
@@ -412,6 +420,7 @@ export class AgentSession implements DurableObject {
   private async handleReset(request: Request): Promise<Response> {
     const prevOwnerId = this.session?.ownerId ?? null;
     const prevTokenHash = this.session?.tokenHash ?? null;
+    const prevTokenValidatedAt = this.session?.tokenValidatedAt ?? null;
     this.session = {
       messages: [],
       files: { ...getTemplateFiles(this.config) },
@@ -422,6 +431,7 @@ export class AgentSession implements DurableObject {
       errors: [],
       ownerId: prevOwnerId,
       tokenHash: prevTokenHash,
+      tokenValidatedAt: prevTokenValidatedAt,
     };
     await this.save();
     return json({ ok: true }, 200, request, this.config.domain);
