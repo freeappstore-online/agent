@@ -138,6 +138,24 @@ describe("Security: fetch_url SSRF prevention", () => {
     const r = await executeInfraTool({ id: "1", name: "fetch_url", input: { url: "https://api.freeappstore.online/v1/auth/exchange" } }, ctx);
     expect(r).toContain("Error");
   });
+
+  it("blocks auth/me endpoint (token probing)", async () => {
+    const ctx = makeCtx();
+    const r = await executeInfraTool({ id: "1", name: "fetch_url", input: { url: "https://api.freeappstore.online/v1/auth/me" } }, ctx);
+    expect(r).toContain("Error");
+  });
+
+  it("blocks freegamestore admin", async () => {
+    const ctx = makeCtx();
+    const r = await executeInfraTool({ id: "1", name: "fetch_url", input: { url: "https://admin.freegamestore.online/api/stats" } }, ctx);
+    expect(r).toContain("Error");
+  });
+
+  it("blocks freegamestore API", async () => {
+    const ctx = makeCtx();
+    const r = await executeInfraTool({ id: "1", name: "fetch_url", input: { url: "https://api.freegamestore.online/v1/auth/me" } }, ctx);
+    expect(r).toContain("Error");
+  });
 });
 
 // ── Infra tool authorization (H-3) ──
@@ -208,6 +226,13 @@ describe("Security: deploy ID validation", () => {
     { id: "has spaces", reason: "contains spaces" },
     { id: "has.dots", reason: "contains dots" },
     { id: "a".repeat(59), reason: "too long (59 chars)" },
+    { id: "admin", reason: "reserved name" },
+    { id: "platform", reason: "reserved name" },
+    { id: "api", reason: "reserved name" },
+    { id: "agent", reason: "reserved name" },
+    { id: "create", reason: "reserved name" },
+    { id: "freeappstore", reason: "reserved name (starts with free)" },
+    { id: "www", reason: "reserved name" },
   ];
 
   for (const { id, reason } of badIds) {

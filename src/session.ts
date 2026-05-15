@@ -38,6 +38,7 @@ export class AgentSession implements DurableObject {
   private env: Env;
   private config: StoreConfig;
   private session: SessionState | null = null;
+  private chatInProgress = false;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -167,6 +168,11 @@ export class AgentSession implements DurableObject {
 
   /** POST /chat — stream an agent turn via SSE */
   private async handleChat(request: Request): Promise<Response> {
+    if (this.chatInProgress) {
+      return json({ error: "A chat request is already in progress. Wait for it to finish." }, 429, request, this.config.domain);
+    }
+    this.chatInProgress = true;
+
     // Reject oversized bodies before parsing
     const contentLength = parseInt(request.headers.get("Content-Length") || "0");
     if (contentLength > 200_000) {
@@ -316,6 +322,7 @@ export class AgentSession implements DurableObject {
         this.logError("chat", scrubKey(String(err)));
         sendSSE({ type: "error", data: String(err) });
       } finally {
+        this.chatInProgress = false;
         writer.close().catch(() => {});
       }
     })();
@@ -454,7 +461,7 @@ function corsHeaders(request: Request, domain: string): Record<string, string> {
     origin &&
     (origin.endsWith(`.${domain}`) ||
       origin === `https://${domain}` ||
-      (origin.endsWith(".pages.dev") && origin.includes("free")) ||
+      (origin.endsWith(".pages.dev") && (origin.includes("freeappstore") || origin.includes("freegamestore"))) ||
       origin.startsWith("http://localhost"))
       ? origin
       : `https://${domain}`;

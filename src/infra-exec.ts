@@ -30,8 +30,9 @@ export async function executeInfraTool(tc: ToolCall, ctx: ExecContext): Promise<
   // Validate deploy ID
   if (tc.name === "deploy" && tc.input.id) {
     const id = tc.input.id as string;
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(id) || id.length > 58 || id.startsWith("free") || id.startsWith("pro")) {
-      return `Error: invalid ${config.noun} ID "${id}". Must be lowercase, numbers, hyphens. No "free"/"pro" prefix. Max 58 chars.`;
+    const RESERVED = ["platform", "admin", "api", "agent", "publish", "create", "sdk", "freeappstore", "freegamestore", "store", "www", "mail", "status"];
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(id) || id.length > 58 || id.startsWith("free") || id.startsWith("pro") || RESERVED.includes(id)) {
+      return `Error: invalid ${config.noun} ID "${id}". Must be lowercase, numbers, hyphens. No "free"/"pro" prefix, no reserved names. Max 58 chars.`;
     }
     if (ctx.appId && ctx.appId !== id) {
       return `Error: this session already deployed "${ctx.appId}". Create a new project for a different ${config.noun}.`;
@@ -136,7 +137,7 @@ async function executeFetchUrl(tc: ToolCall, config: StoreConfig): Promise<strin
   if (/localhost|127\.|192\.168|10\.|172\.1[6-9]\.|172\.2|172\.3[01]\.|169\.254|0\.0\.0\.0|\[::1\]/i.test(url)) {
     return "Error: cannot fetch private/internal URLs.";
   }
-  if (/admin\.freeappstore|publish\.freeappstore|agent\.freeappstore|api\.freeappstore\.online\/v1\/(publish|apps|auth\/exchange)/i.test(url)) {
+  if (/admin\.(freeappstore|freegamestore)|publish\.(freeappstore|freegamestore)|agent\.(freeappstore|freegamestore)|api\.(freeappstore|freegamestore)\.online\/v1\/(publish|apps|auth\/(exchange|me))/i.test(url)) {
     return "Error: cannot fetch internal platform URLs.";
   }
   return fetchUrl(url, (tc.input.method as string) || "GET", config.agentName);
