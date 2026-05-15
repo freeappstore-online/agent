@@ -207,6 +207,10 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
 
     case "delete_file": {
       const path = input.path as string;
+      if (!path) return { id, content: "Error: path is required", isError: true };
+      if (path.includes("..") || path.startsWith("/") || path.startsWith(".github/")) {
+        return { id, content: `Error: path "${path}" is not allowed.`, isError: true };
+      }
       if (!files.has(path)) return { id, content: `Error: file not found: ${path}`, isError: true };
       files.delete(path);
       return { id, content: `Deleted ${path}` };

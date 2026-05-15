@@ -78,7 +78,7 @@ export async function deployApp(
     const createRepo = await ghApi(`/orgs/${config.org}/repos`, "POST", {
       name: deployConfig.id,
       private: false,
-      description: deployConfig.description,
+      description: (deployConfig.description || "").slice(0, 200),
       auto_init: true,
       has_issues: true,
       has_projects: false,
