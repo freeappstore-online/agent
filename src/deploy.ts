@@ -234,10 +234,9 @@ async function pushFilesToGitHub(repoId: string, files: Map<string, string>, tok
   });
   if (!commit.sha) throw new Error(`Failed to create commit: ${commit.message || "unknown error"}`);
 
-  // Update main ref
+  // Update main ref (no force — fails if someone else pushed, preventing data loss)
   await ghApi(`/repos/${repo}/git/refs/heads/main`, "PATCH", {
     sha: commit.sha,
-    force: true,
   });
 }
 

@@ -35,7 +35,7 @@ export class AnthropicAdapter implements ProviderAdapter {
 
     if (!res.ok) {
       const err = await res.text();
-      yield { type: "error", data: `Anthropic API error ${res.status}: ${err}` };
+      yield { type: "error", data: `Anthropic API error ${res.status}: ${err.slice(0, 500)}` };
       return;
     }
 

@@ -31,6 +31,8 @@ function corsHeaders(request: Request, domain: string): Record<string, string> {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Credentials": "true",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
   };
 }
 
@@ -51,7 +53,6 @@ export default {
         JSON.stringify({
           ok: true,
           service: config.agentName,
-          hasSecrets: !!(env.GITHUB_TOKEN && env.CF_API_TOKEN),
         }),
         {
           headers: { "Content-Type": "application/json", ...corsHeaders(request, config.domain) },
