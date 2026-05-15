@@ -17,6 +17,10 @@ interface ErrorEntry {
   message: string;
 }
 
+const MAX_MESSAGES = 200;
+const MAX_FILES = 100;
+const MAX_ERRORS = 50;
+
 interface SessionState {
   messages: Message[];
   files: Record<string, string>;
@@ -99,7 +103,8 @@ export class AgentSession implements DurableObject {
       }
       return json({ error: "not found" }, 404, request, this.config.domain);
     } catch (err) {
-      return json({ error: String(err) }, 500, request, this.config.domain);
+      console.error("Session error:", err);
+      return json({ error: "Internal server error" }, 500, request, this.config.domain);
     }
   }
 
@@ -159,6 +164,14 @@ export class AgentSession implements DurableObject {
         });
 
         session.messages.push(...result.newMessages);
+        // Enforce limits to prevent unbounded storage growth
+        if (session.messages.length > MAX_MESSAGES) session.messages = session.messages.slice(-MAX_MESSAGES);
+        if (session.errors.length > MAX_ERRORS) session.errors = session.errors.slice(-MAX_ERRORS);
+        const fileKeys = Object.keys(files);
+        if (fileKeys.length > MAX_FILES) {
+          const keep = new Set(fileKeys.slice(-MAX_FILES));
+          for (const k of fileKeys) { if (!keep.has(k)) files.delete(k); }
+        }
         session.files = Object.fromEntries(files);
         await this.save();
 
@@ -354,7 +367,7 @@ function corsHeaders(request: Request, domain: string): Record<string, string> {
     origin &&
     (origin.endsWith(`.${domain}`) ||
       origin === `https://${domain}` ||
-      origin.endsWith(".pages.dev") ||
+      (origin.endsWith(".pages.dev") && origin.includes("free")) ||
       origin.startsWith("http://localhost"))
       ? origin
       : `https://${domain}`;

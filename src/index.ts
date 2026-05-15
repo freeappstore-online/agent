@@ -22,7 +22,7 @@ function corsHeaders(request: Request, domain: string): Record<string, string> {
     origin &&
     (origin.endsWith(`.${domain}`) ||
       origin === `https://${domain}` ||
-      origin.endsWith(".pages.dev") ||
+      (origin.endsWith(".pages.dev") && origin.includes("free")) ||
       origin.startsWith("http://localhost"))
       ? origin
       : `https://${domain}`;

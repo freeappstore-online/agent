@@ -129,8 +129,15 @@ async function executePushUpdate(tc: ToolCall, ctx: ExecContext): Promise<string
 
 async function executeFetchUrl(tc: ToolCall, config: StoreConfig): Promise<string> {
   const url = tc.input.url as string;
-  if (!url.startsWith("https://") || /localhost|127\.|192\.168|10\.|172\.1[6-9]\.|172\.2|172\.3[01]\.|169\.254/i.test(url)) {
+  if (!url.startsWith("https://")) {
     return "Error: can only fetch public HTTPS URLs.";
+  }
+  // Block private IPs and internal platform services
+  if (/localhost|127\.|192\.168|10\.|172\.1[6-9]\.|172\.2|172\.3[01]\.|169\.254|0\.0\.0\.0|\[::1\]/i.test(url)) {
+    return "Error: cannot fetch private/internal URLs.";
+  }
+  if (/admin\.freeappstore|publish\.freeappstore|agent\.freeappstore|api\.freeappstore\.online\/v1\/(publish|apps|auth\/exchange)/i.test(url)) {
+    return "Error: cannot fetch internal platform URLs.";
   }
   return fetchUrl(url, (tc.input.method as string) || "GET", config.agentName);
 }
