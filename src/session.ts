@@ -190,16 +190,26 @@ export class AgentSession implements DurableObject {
       aiConfig: AIConfig;
     }>();
 
-    if (!body.message || !body.aiConfig?.apiKey || !body.aiConfig?.provider || !body.aiConfig?.model) {
+    if (!body.message || !body.aiConfig?.provider || !body.aiConfig?.model) {
       return json(
-        { error: "message, aiConfig.provider, aiConfig.model, and aiConfig.apiKey are required" },
+        { error: "message, aiConfig.provider, and aiConfig.model are required" },
+        400,
+        request,
+        this.config.domain,
+      );
+    }
+    // apiKey may be empty if the worker resolved it from the platform vault
+    // and injected it into the body before forwarding to the DO.
+    if (!body.aiConfig.apiKey) {
+      return json(
+        { error: "No API key found. Add one in Profile → AI Providers, or configure it in the platform key vault." },
         400,
         request,
         this.config.domain,
       );
     }
 
-    const validProviders = ["anthropic", "openai", "google", "github"];
+    const validProviders = ["anthropic", "openai", "google", "github", "openrouter"];
     if (!validProviders.includes(body.aiConfig.provider)) {
       return json({ error: `Invalid provider. Use: ${validProviders.join(", ")}` }, 400, request, this.config.domain);
     }

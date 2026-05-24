@@ -6,6 +6,7 @@ export { AgentSession } from "./session";
 
 export interface Env {
   SESSION: DurableObjectNamespace;
+  PLATFORM?: Fetcher;
   GITHUB_TOKEN: string;
   CF_API_TOKEN: string;
   CF_ACCOUNT_ID: string;
@@ -14,6 +15,17 @@ export interface Env {
   STORE: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
+}
+
+/** Map VibeCode provider names to platform key vault provider IDs. */
+function mapProviderToVault(provider: string): string | null {
+  const map: Record<string, string> = {
+    openrouter: "openrouter",
+    anthropic: "anthropic",
+    openai: "openai",
+    google: "google-ai",
+  };
+  return map[provider] ?? null;
 }
 
 function corsHeaders(request: Request, domain: string): Record<string, string> {
@@ -74,11 +86,41 @@ export default {
     const doId = env.SESSION.idFromName(sessionId);
     const stub = env.SESSION.get(doId);
 
-    // Forward the request to the Durable Object (DO has env via constructor)
+    // For /chat: try to resolve API key from platform vault before forwarding.
+    // If the browser sent a key, use it (backwards compat). If not, check vault.
+    let forwardBody: BodyInit | undefined = request.method === "POST" ? request.body : undefined;
+
+    if (route === "chat" && request.method === "POST" && env.PLATFORM) {
+      try {
+        const bodyText = await request.text();
+        const body = JSON.parse(bodyText);
+        const authHeader = request.headers.get("Authorization") || "";
+
+        // If no API key in request but user is authenticated, try the vault
+        if (body.aiConfig && !body.aiConfig.apiKey && authHeader) {
+          const provider = mapProviderToVault(body.aiConfig.provider);
+          if (provider) {
+            const vaultRes = await env.PLATFORM.fetch(
+              `https://api.freeappstore.online/v1/keys/resolve/${provider}`,
+              { headers: { Authorization: authHeader } },
+            );
+            if (vaultRes.ok) {
+              const { key } = (await vaultRes.json()) as { key: string | null };
+              if (key) body.aiConfig.apiKey = key;
+            }
+          }
+        }
+        forwardBody = JSON.stringify(body);
+      } catch {
+        // Parse failed — forward original body
+        forwardBody = request.body ?? undefined;
+      }
+    }
+
     const doRequest = new Request(`https://do${subpath}`, {
       method: request.method,
       headers: request.headers,
-      body: request.method === "POST" ? request.body : undefined,
+      body: forwardBody,
     });
 
     return stub.fetch(doRequest);
