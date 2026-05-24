@@ -336,6 +336,65 @@ export class AgentSession implements DurableObject {
           // Persist state after all infra tools complete
           session.files = Object.fromEntries(files);
           await this.save();
+
+          // Follow-up: let the AI react to infra tool results.
+          // If deploy/push failed, the AI can diagnose and retry.
+          const hasError = infraResults.some((r) => /error|fail|threw/i.test(r.content));
+          const followUpPrompt = hasError
+            ? "The tool action above returned an error. Analyze the error, fix the issue if possible, and retry the action. Do not ask the user — just fix it."
+            : "The action completed. Summarize the result briefly for the user.";
+
+          try {
+            const followUp = await runAgentTurn(body.aiConfig, session.messages, followUpPrompt, files, writer, config, {
+              appId: session.appId,
+              appName: session.appName,
+              fileCount: files.size,
+              fileList: [...files.keys()].sort().join(", "),
+            });
+            session.messages.push(...followUp.newMessages);
+            if (session.messages.length > MAX_MESSAGES) session.messages = session.messages.slice(-MAX_MESSAGES);
+            session.files = Object.fromEntries(files);
+
+            // If the follow-up itself produced more infra requests, execute them too
+            if (followUp.infraRequests.length > 0) {
+              const retryResults: { id: string; content: string }[] = [];
+              for (const req of followUp.infraRequests) {
+                const tc = req.toolCall;
+                let toolResult: string;
+                try {
+                  toolResult = await executeInfraTool(tc, {
+                    appId: session.appId,
+                    files,
+                    env: deployEnv,
+                    config,
+                    onDeployStatus: (status) => {
+                      session.deployStatus = status;
+                      this.state.storage.put("session", session);
+                      sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
+                      if (status.phase === "live") this.sendPush("Your build is live!");
+                      else if (status.phase === "error") this.sendPush("Build failed");
+                    },
+                    onAppDeployed: (id, name) => {
+                      session.appId = id;
+                      session.appName = name;
+                      session.deployStatus = { phase: "provisioning", steps: [] };
+                      this.state.storage.put("session", session);
+                    },
+                  });
+                } catch (err) {
+                  toolResult = `Tool ${tc.name} threw an error: ${String(err)}`;
+                }
+                sendSSE({ type: "tool_result", data: JSON.stringify({ id: tc.id, tool: tc.name, result: toolResult.slice(0, 500) }) });
+                retryResults.push({ id: tc.id, content: toolResult.slice(0, 3000) });
+              }
+              session.messages.push({ role: "tool_result", content: "", toolResults: retryResults });
+              session.files = Object.fromEntries(files);
+            }
+            await this.save();
+          } catch (followUpErr) {
+            this.logError("follow-up", scrubKey(String(followUpErr)));
+            // Follow-up failed — not critical, the infra action already completed
+          }
         }
 
         sendSSE({ type: "done", data: "" });
