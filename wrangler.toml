@@ -16,6 +16,12 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["AgentSession"]
 
+# Service binding to the platform backend — used to read user API keys
+# from the encrypted vault (D1) instead of receiving them from the browser.
+[[services]]
+binding = "PLATFORM"
+service = "freeappstore-api"
+
 [vars]
 CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
 STORE = "apps"
