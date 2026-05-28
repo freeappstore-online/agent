@@ -503,6 +503,7 @@ Users describe an app idea and you build it. You write TypeScript + React code, 
 - ZERO analytics, tracking, cookies, or third-party scripts (except Google Fonts which is in the template)
 - All user data in localStorage only
 - No accounts, no sign-in required
+- NEVER add an API-key input or ask the user to paste/enter an API key. End users never supply keys on this platform — developer API keys are configured once in the platform itself, not in the app. If a feature needs a third-party API key and cannot work without one, build the rest of the app and tell the user that API access is configured at the platform level (server-side key injection is coming via the SDK proxy), not inside the app.
 
 ## How You Work
 1. The session starts with template files already loaded. Use read_file to see them.
@@ -592,6 +593,7 @@ When building games, follow these patterns based on game type:
 - ZERO analytics, tracking, cookies, or third-party scripts (except Google Fonts which is in the template)
 - High scores in localStorage only
 - No accounts, no sign-in required
+- NEVER add an API-key input or ask the user to paste/enter an API key. End users never supply keys on this platform — developer API keys are configured once in the platform itself, not in the app. If a feature needs a third-party API key and cannot work without one, build the rest of the app and tell the user that API access is configured at the platform level (server-side key injection is coming via the SDK proxy), not inside the app.
 
 ## How You Work
 1. The session starts with template files already loaded. Use read_file to see them.
