@@ -174,6 +174,20 @@ export class AgentSession implements DurableObject {
     }
   }
 
+  /**
+   * Persist a turn that failed validation before the agent ran (e.g. no API
+   * key, bad provider). Without this the user's message + the error would live
+   * only in the browser and get overwritten on reconnect, because /history
+   * (DO-first) wouldn't know the turn happened. Every message must be saved.
+   */
+  private async recordErrorTurn(message: string, errorText: string): Promise<void> {
+    const session = await this.load();
+    session.messages.push({ role: "user", content: message.slice(0, 50_000) });
+    session.messages.push({ role: "assistant", content: `Error: ${errorText}` });
+    if (session.messages.length > MAX_MESSAGES) session.messages = session.messages.slice(-MAX_MESSAGES);
+    await this.save();
+  }
+
   /** POST /chat — stream an agent turn via SSE */
   private async handleChat(request: Request): Promise<Response> {
     if (this.chatInProgress) {
@@ -196,17 +210,16 @@ export class AgentSession implements DurableObject {
     // apiKey may be empty if the worker resolved it from the platform vault
     // and injected it into the body before forwarding to the DO.
     if (!body.aiConfig.apiKey) {
-      return json(
-        { error: "No API key found. Add one in Profile → AI Providers, or configure it in the platform key vault." },
-        400,
-        request,
-        this.config.domain,
-      );
+      const msg = "No API key found. Add one in Profile → AI Providers, or configure it in the platform key vault.";
+      await this.recordErrorTurn(body.message, msg);
+      return json({ error: msg }, 400, request, this.config.domain);
     }
 
     const validProviders = ["anthropic", "openai", "google", "github", "openrouter"];
     if (!validProviders.includes(body.aiConfig.provider)) {
-      return json({ error: `Invalid provider. Use: ${validProviders.join(", ")}` }, 400, request, this.config.domain);
+      const msg = `Invalid provider. Use: ${validProviders.join(", ")}`;
+      await this.recordErrorTurn(body.message, msg);
+      return json({ error: msg }, 400, request, this.config.domain);
     }
 
     // Truncate message to prevent storage abuse
@@ -248,6 +261,7 @@ export class AgentSession implements DurableObject {
         const safe = evt.type === "error" || evt.type === "text" ? { ...evt, data: scrubKey(evt.data) } : evt;
         writer.write(encoder.encode(`data: ${JSON.stringify(safe)}\n\n`)).catch(() => {});
       };
+      let turnSaved = false;
 
       try {
         const sessionCtx = {
@@ -274,6 +288,7 @@ export class AgentSession implements DurableObject {
         }
         session.files = Object.fromEntries(files);
         await this.save();
+        turnSaved = true;
 
         // Execute infra tools server-side and feed results back to agent
         if (result.infraRequests.length > 0) {
@@ -396,6 +411,15 @@ export class AgentSession implements DurableObject {
       } catch (err) {
         this.logError("chat", scrubKey(String(err)));
         sendSSE({ type: "error", data: String(err) });
+        // If the turn threw before we saved it, the user's message + this error
+        // would be lost on reconnect. Persist them so every message is kept.
+        if (!turnSaved) {
+          try {
+            await this.recordErrorTurn(body.message, scrubKey(String(err)));
+          } catch {
+            /* best effort */
+          }
+        }
       } finally {
         this.chatInProgress = false;
         writer.close().catch(() => {});
