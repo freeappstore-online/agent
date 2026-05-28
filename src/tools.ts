@@ -54,6 +54,29 @@ const FILE_TOOLS: ToolDef[] = [
       required: ["pattern"],
     },
   },
+  {
+    name: "register_api",
+    description:
+      "Declare a third-party API this app calls through the platform proxy (fas.proxy.fetch). Records it in fas.json so the developer can add the key once in the platform — the end user NEVER enters a key. Call this for each external API the app uses. Does NOT need the key value (the developer adds that in the app's API Keys page after publishing).",
+    parameters: {
+      type: "object",
+      properties: {
+        host: { type: "string", description: "Upstream API host, no scheme. e.g. 'api.openweathermap.org'" },
+        secretName: { type: "string", description: "Name for the developer's key. UPPER_SNAKE_CASE. e.g. 'OPENWEATHER_KEY'" },
+        injectKind: {
+          type: "string",
+          description: "How the key is sent: 'query' (URL param), 'header', or 'bearer' (Authorization: Bearer)",
+        },
+        injectName: {
+          type: "string",
+          description:
+            "Query-param or header name to inject the key into. Required for 'query'/'header'; omit for 'bearer'. e.g. 'appid' or 'X-API-Key'",
+        },
+        description: { type: "string", description: "Short note on what the API is for." },
+      },
+      required: ["host", "secretName", "injectKind"],
+    },
+  },
 ];
 
 /** Tool definitions parameterized by store config */
@@ -233,6 +256,49 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
 
     case "run_compliance_check": {
       return { id, content: runComplianceCheck(files, config) };
+    }
+
+    case "register_api": {
+      const host = String(input.host || "")
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/.*$/, "");
+      const secretName = String(input.secretName || "").trim();
+      const injectKind = String(input.injectKind || "").trim();
+      const injectName = input.injectName ? String(input.injectName).trim() : "";
+      if (!host || !secretName || !injectKind) {
+        return { id, content: "Error: host, secretName, and injectKind are required", isError: true };
+      }
+      if (!["query", "header", "bearer"].includes(injectKind)) {
+        return { id, content: "Error: injectKind must be 'query', 'header', or 'bearer'", isError: true };
+      }
+      if (injectKind !== "bearer" && !injectName) {
+        return { id, content: "Error: injectName is required for injectKind 'query' or 'header'", isError: true };
+      }
+      // Merge into the fas.json manifest (committed at deploy; read by the
+      // create-web API Keys page to set up the allowlist + secret).
+      let manifest: { apis: Record<string, unknown>[] } = { apis: [] };
+      const existing = files.get("fas.json");
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing);
+          if (Array.isArray(parsed?.apis)) manifest = parsed;
+        } catch {
+          /* malformed — start fresh */
+        }
+      }
+      const entry: Record<string, unknown> = { host, secretName, injectKind, pattern: `${host}/*`, methods: ["GET"] };
+      if (injectName) entry.injectName = injectName;
+      if (input.description) entry.description = String(input.description);
+      const i = manifest.apis.findIndex((a) => a.host === host);
+      if (i >= 0) manifest.apis[i] = entry;
+      else manifest.apis.push(entry);
+      files.set("fas.json", `${JSON.stringify(manifest, null, 2)}\n`);
+      return {
+        id,
+        content: `Registered "${host}" (secret: ${secretName}) and wrote fas.json. The app must call it via fas.proxy.fetch('${host}/...'). Tell the user: after you publish this app, open its "API Keys" page and add a key named ${secretName} — the key is configured in the platform, never entered in the app.`,
+      };
     }
 
     default:

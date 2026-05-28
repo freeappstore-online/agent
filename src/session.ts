@@ -194,7 +194,7 @@ export class AgentSession implements DurableObject {
       return json({ error: "A chat request is already in progress. Wait for it to finish." }, 429, request, this.config.domain);
     }
     // Validate BEFORE setting chatInProgress (early returns must not lock the session)
-    const contentLength = parseInt(request.headers.get("Content-Length") || "0");
+    const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
     if (contentLength > 200_000) {
       return json({ error: "Request too large (max 200KB)" }, 413, request, this.config.domain);
     }

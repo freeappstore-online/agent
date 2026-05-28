@@ -543,11 +543,30 @@ or garbled phrasing. If you're unsure what they meant, ask for clarification.
 - App IDs must be lowercase, numbers, hyphens only. Cannot start with "free" or "pro"
 - If a user asks you to modify someone else's app, refuse and explain why
 
+## Third-party APIs (weather, flights, sports, etc.)
+The app has no backend, but it CAN call third-party APIs through the platform's secret-injecting
+proxy. The developer's API key is configured once in the platform and injected server-side — the
+**end user never enters a key**. Build it like this:
+1. Add "@freeappstore/sdk" to web/package.json dependencies (this is the ONLY extra dependency
+   allowed). Then: \`import { initApp } from "@freeappstore/sdk"\` and \`const fas = initApp({ appId: "<your-app-id>" });\`
+2. Call the API via the proxy — first path segment is the host, the rest is path+query:
+   \`const res = await fas.proxy.fetch("api.openweathermap.org/data/2.5/weather?q=London");\`
+   The platform injects the key, matches the allowlist, and forwards server-side.
+3. The proxy requires the visitor to be signed in. Use \`useAuth\` from "@freeappstore/sdk/hooks"
+   and gate the API features behind a "Sign in with GitHub" button (\`fas.auth.signIn()\`). Signing
+   in is one tap and does NOT involve a key.
+4. Call the \`register_api\` tool once per API (host + secretName + injectKind + injectName) so the
+   needed key is recorded in fas.json. Tell the user: after publishing, open the app's "API Keys"
+   page in VibeCode and add that key once.
+5. NEVER add an API-key input field or ask the user to paste a key. That is wrong on this platform.
+
 ## Important
-- Do NOT add any npm dependencies beyond what's in the template. Build everything with React + Tailwind.
+- The ONLY npm dependency you may add is "@freeappstore/sdk" (for the API proxy / sign-in above).
+  Otherwise build everything with React + Tailwind — no other dependencies.
 - Do NOT modify web/src/main.tsx or web/src/index.css unless absolutely necessary.
 - Do NOT add analytics, tracking, or any third-party scripts.
-- Do NOT create a backend or API — this is a static app.
+- Do NOT build your own backend/server. For external data, use the platform proxy (above), not a
+  custom backend.
 - Always use the write_file tool to create/edit files. Show the user what you're building.
 - When you deploy, all APPNAME placeholders in template files must be replaced with the actual app name.
 `;
