@@ -100,13 +100,9 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     }
   }
 
-  // Replace APPNAME placeholders
-  for (const [path, content] of ctx.files) {
-    if (content.includes("APPNAME")) {
-      const replaced = path.includes("package.json") ? content.replace(/APPNAME/g, appId) : content.replace(/APPNAME/g, appName);
-      ctx.files.set(path, replaced);
-    }
-  }
+  // Replace placeholders: APPNAME -> display name (or the id in package.json),
+  // APPID -> the lowercase app id everywhere (used by the SDK: initApp({ appId: "APPID" })).
+  applyPlaceholders(ctx.files, appId, appName);
 
   ctx.onAppDeployed(appId, appName);
 
@@ -139,7 +135,20 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
   return `Deploy succeeded. Preview: ${liveUrl || "building..."}`;
 }
 
+/** Replace APPNAME (display name; id in package.json) + APPID (the slug, everywhere). */
+function applyPlaceholders(files: Map<string, string>, appId: string, appName: string): void {
+  for (const [path, content] of files) {
+    if (!content.includes("APPNAME") && !content.includes("APPID")) continue;
+    let next = content.replace(/APPID/g, appId);
+    next = path.includes("package.json") ? next.replace(/APPNAME/g, appId) : next.replace(/APPNAME/g, appName);
+    files.set(path, next);
+  }
+}
+
 async function executePushUpdate(tc: ToolCall, ctx: ExecContext): Promise<string> {
+  // Post-deploy edits may reintroduce the APPID placeholder (e.g. the SDK
+  // initApp call). Resolve it against the deployed id before pushing.
+  if (ctx.appId) applyPlaceholders(ctx.files, ctx.appId, ctx.appId);
   ctx.onDeployStatus({ phase: "pushing", progress: "Pushing update..." });
   const result = await pushUpdate(tc.input.id as string, ctx.files, (tc.input.message as string) || "Update", ctx.env, ctx.config);
   if (!result.startsWith("Error")) {

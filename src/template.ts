@@ -548,7 +548,10 @@ The app has no backend, but it CAN call third-party APIs through the platform's 
 proxy. The developer's API key is configured once in the platform and injected server-side — the
 **end user never enters a key**. Build it like this:
 1. Add "@freeappstore/sdk" to web/package.json dependencies (this is the ONLY extra dependency
-   allowed). Then: \`import { initApp } from "@freeappstore/sdk"\` and \`const fas = initApp({ appId: "<your-app-id>" });\`
+   allowed). Then: \`import { initApp } from "@freeappstore/sdk"\` and
+   \`const fas = initApp({ appId: "APPID" });\` — write the literal string "APPID"; it is replaced
+   with this app's real id at deploy. Do NOT guess the id (the SDK appId MUST equal the deployed id
+   or the proxy will 404).
 2. Call the API via the proxy — first path segment is the host, the rest is path+query:
    \`const res = await fas.proxy.fetch("api.openweathermap.org/data/2.5/weather?q=London");\`
    The platform injects the key, matches the allowlist, and forwards server-side.
