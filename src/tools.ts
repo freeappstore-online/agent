@@ -270,6 +270,10 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
       if (!host || !secretName || !injectKind) {
         return { id, content: "Error: host, secretName, and injectKind are required", isError: true };
       }
+      // Must match the platform's secret-name rule (uppercase + underscores).
+      if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(secretName)) {
+        return { id, content: `Error: secretName "${secretName}" must be UPPER_SNAKE_CASE (e.g. OPENWEATHER_KEY).`, isError: true };
+      }
       if (!["query", "header", "bearer"].includes(injectKind)) {
         return { id, content: "Error: injectKind must be 'query', 'header', or 'bearer'", isError: true };
       }
@@ -288,7 +292,8 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
           /* malformed — start fresh */
         }
       }
-      const entry: Record<string, unknown> = { host, secretName, injectKind, pattern: `${host}/*`, methods: ["GET"] };
+      // pattern is a URL PREFIX (no globs) — the proxy matches url.startsWith(pattern).
+      const entry: Record<string, unknown> = { host, secretName, injectKind, pattern: `https://${host}/`, methods: ["GET"] };
       if (injectName) entry.injectName = injectName;
       if (input.description) entry.description = String(input.description);
       const i = manifest.apis.findIndex((a) => a.host === host);
