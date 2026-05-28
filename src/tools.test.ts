@@ -190,6 +190,60 @@ describe("executeTool — register_api", () => {
   });
 });
 
+describe("locked infrastructure files", () => {
+  const lockedPaths = [
+    "package.json",
+    "web/package.json",
+    "pnpm-workspace.yaml",
+    "web/vite.config.ts",
+    "web/tsconfig.json",
+    "web/tsconfig.app.json",
+    "web/tsconfig.node.json",
+    "web/src/main.tsx",
+    ".gitignore",
+    "LICENSE",
+  ];
+
+  for (const path of lockedPaths) {
+    it(`write_file rejects ${path}`, () => {
+      const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
+      const result = executeTool({ id: "1", name: "write_file", input: { path, content: "hacked" } }, files, appsConfig);
+      expect(result.isError).toBe(true);
+      expect(result.content).toContain("locked infrastructure file");
+      // Original content must be unchanged
+      expect(files.get(path)).not.toBe("hacked");
+    });
+
+    it(`delete_file rejects ${path}`, () => {
+      const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
+      const result = executeTool({ id: "1", name: "delete_file", input: { path } }, files, appsConfig);
+      expect(result.isError).toBe(true);
+      expect(result.content).toContain("locked infrastructure file");
+      expect(files.has(path)).toBe(true);
+    });
+  }
+
+  it("read_file still works on locked files", () => {
+    const files = new Map(Object.entries(getTemplateFiles(appsConfig)));
+    const result = executeTool({ id: "1", name: "read_file", input: { path: "package.json" } }, files, appsConfig);
+    expect(result.isError).toBeUndefined();
+    expect(result.content).toContain("packageManager");
+  });
+
+  it("write_file allows non-locked paths", () => {
+    const files = new Map<string, string>();
+    const result = executeTool({ id: "1", name: "write_file", input: { path: "web/src/App.tsx", content: "export default () => <div/>" } }, files, appsConfig);
+    expect(result.isError).toBeUndefined();
+    expect(files.get("web/src/App.tsx")).toBe("export default () => <div/>");
+  });
+
+  it("write_file allows new component files", () => {
+    const files = new Map<string, string>();
+    const result = executeTool({ id: "1", name: "write_file", input: { path: "web/src/components/Sidebar.tsx", content: "export const Sidebar = () => null" } }, files, appsConfig);
+    expect(result.isError).toBeUndefined();
+  });
+});
+
 describe("run_compliance_check", () => {
   it("apps template passes apps compliance (except APPNAME + Fraunces)", () => {
     const files = new Map(Object.entries(getTemplateFiles(appsConfig)));

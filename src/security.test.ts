@@ -75,9 +75,10 @@ describe("Security: write_file path validation", () => {
     expect(r.content).toContain("Wrote");
   });
 
-  it("allows package.json", () => {
+  it("blocks package.json (locked infrastructure file)", () => {
     const r = executeTool({ id: "1", name: "write_file", input: { path: "package.json", content: "{}" } }, files, appsConfig);
-    expect(r.isError).toBeFalsy();
+    expect(r.isError).toBe(true);
+    expect(r.content).toContain("locked infrastructure file");
   });
 });
 

@@ -199,6 +199,22 @@ export const INFRA_TOOLS = new Set([
   "get_audit_results",
 ]);
 
+// Infra files the LLM must never overwrite. These are set by the template
+// and contain fields (packageManager, engines, monorepo config) that the
+// LLM consistently drops when rewriting them, breaking CI.
+const LOCKED_FILES = new Set([
+  "package.json",
+  "web/package.json",
+  "pnpm-workspace.yaml",
+  "web/vite.config.ts",
+  "web/tsconfig.json",
+  "web/tsconfig.app.json",
+  "web/tsconfig.node.json",
+  "web/src/main.tsx",
+  ".gitignore",
+  "LICENSE",
+]);
+
 export function executeTool(toolCall: ToolCall, files: Map<string, string>, config: StoreConfig): ToolResult {
   const { name, input, id } = toolCall;
 
@@ -209,6 +225,9 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
       if (!path) return { id, content: "Error: path is required", isError: true };
       if (path.includes("..") || path.startsWith("/") || path.startsWith(".github/")) {
         return { id, content: `Error: path "${path}" is not allowed. No "..", absolute paths, or .github/ files.`, isError: true };
+      }
+      if (LOCKED_FILES.has(path)) {
+        return { id, content: `Error: "${path}" is a locked infrastructure file and cannot be modified. Build your app in web/src/ instead.`, isError: true };
       }
       files.set(path, content);
       return { id, content: `Wrote ${path} (${content.length} bytes)` };
@@ -233,6 +252,9 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
       if (!path) return { id, content: "Error: path is required", isError: true };
       if (path.includes("..") || path.startsWith("/") || path.startsWith(".github/")) {
         return { id, content: `Error: path "${path}" is not allowed.`, isError: true };
+      }
+      if (LOCKED_FILES.has(path)) {
+        return { id, content: `Error: "${path}" is a locked infrastructure file and cannot be deleted.`, isError: true };
       }
       if (!files.has(path)) return { id, content: `Error: file not found: ${path}`, isError: true };
       files.delete(path);
