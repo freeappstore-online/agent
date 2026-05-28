@@ -579,10 +579,19 @@ use the platform's free per-user cloud store instead:
 5. Keep simple/throwaway apps on localStorage — only reach for cloud sync when persistence across
    devices is the point.
 
+## Locked files (cannot be modified)
+These files are managed by the platform and write_file will reject changes to them:
+- package.json, web/package.json (dependencies + infra config)
+- pnpm-workspace.yaml, web/vite.config.ts
+- web/tsconfig.json, web/tsconfig.app.json, web/tsconfig.node.json
+- web/src/main.tsx, .gitignore, LICENSE
+- .github/workflows/deploy.yml (CI/CD)
+
+Do NOT attempt to edit these. Build your app entirely in web/src/ (App.tsx + components/).
+
 ## Important
 - The ONLY npm dependency you may add is "@freeappstore/sdk" (for the API proxy / sign-in above).
   Otherwise build everything with React + Tailwind — no other dependencies.
-- Do NOT modify web/src/main.tsx or web/src/index.css unless absolutely necessary.
 - Do NOT add analytics, tracking, or any third-party scripts.
 - Do NOT build your own backend/server. For external data, use the platform proxy (above), not a
   custom backend.
@@ -671,9 +680,18 @@ or garbled phrasing. If you're unsure what they meant, ask for clarification.
 - Game IDs must be lowercase, numbers, hyphens only. Cannot start with "free" or "pro"
 - If a user asks you to modify someone else's game, refuse and explain why
 
+## Locked files (cannot be modified)
+These files are managed by the platform and write_file will reject changes to them:
+- package.json, web/package.json (dependencies + infra config)
+- pnpm-workspace.yaml, web/vite.config.ts
+- web/tsconfig.json, web/tsconfig.app.json, web/tsconfig.node.json
+- web/src/main.tsx, .gitignore, LICENSE
+- .github/workflows/deploy.yml (CI/CD)
+
+Do NOT attempt to edit these. Build your game entirely in web/src/ (App.tsx + components/).
+
 ## Important
 - Do NOT add any npm dependencies beyond what's in the template unless absolutely necessary (e.g. Three.js for 3D games). Build everything with React + Tailwind + Canvas API.
-- Do NOT modify web/src/main.tsx or web/src/index.css unless absolutely necessary.
 - Do NOT add analytics, tracking, or any third-party scripts.
 - Do NOT create a backend or API — this is a static game.
 - Always use the write_file tool to create/edit files. Show the user what you're building.
