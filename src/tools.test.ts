@@ -128,6 +128,68 @@ describe("executeTool — file tools", () => {
   });
 });
 
+describe("executeTool — register_api", () => {
+  const reg = (input: Record<string, unknown>, files = new Map<string, string>()) => ({
+    files,
+    result: executeTool({ id: "1", name: "register_api", input }, files, appsConfig),
+  });
+
+  it("writes fas.json with a https:// URL-prefix pattern (not a glob)", () => {
+    const { files, result } = reg({
+      host: "api.openweathermap.org",
+      secretName: "OPENWEATHER_KEY",
+      injectKind: "query",
+      injectName: "appid",
+    });
+    expect(result.isError).toBeFalsy();
+    const manifest = JSON.parse(files.get("fas.json")!);
+    expect(manifest.apis).toHaveLength(1);
+    const api = manifest.apis[0];
+    expect(api.pattern).toBe("https://api.openweathermap.org/");
+    expect(api.pattern).not.toContain("*");
+    expect(api).toMatchObject({ host: "api.openweathermap.org", secretName: "OPENWEATHER_KEY", injectKind: "query", injectName: "appid" });
+  });
+
+  it("strips scheme/path from host", () => {
+    const { files } = reg({ host: "https://api.x.com/v1/foo", secretName: "X_KEY", injectKind: "bearer" });
+    expect(JSON.parse(files.get("fas.json")!).apis[0].host).toBe("api.x.com");
+  });
+
+  it("rejects a non-UPPER_SNAKE_CASE secretName", () => {
+    const { result } = reg({ host: "api.x.com", secretName: "weatherKey", injectKind: "query", injectName: "appid" });
+    expect(result.isError).toBe(true);
+    expect(result.content).toContain("UPPER_SNAKE_CASE");
+  });
+
+  it("requires injectName for query/header but not bearer", () => {
+    expect(reg({ host: "a.com", secretName: "A_KEY", injectKind: "query" }).result.isError).toBe(true);
+    expect(reg({ host: "a.com", secretName: "A_KEY", injectKind: "bearer" }).result.isError).toBeFalsy();
+  });
+
+  it("rejects an unknown injectKind", () => {
+    expect(reg({ host: "a.com", secretName: "A_KEY", injectKind: "cookie" }).result.isError).toBe(true);
+  });
+
+  it("merges + dedupes by host across calls", () => {
+    const files = new Map<string, string>();
+    executeTool({ id: "1", name: "register_api", input: { host: "a.com", secretName: "A_KEY", injectKind: "bearer" } }, files, appsConfig);
+    executeTool(
+      { id: "2", name: "register_api", input: { host: "b.com", secretName: "B_KEY", injectKind: "query", injectName: "k" } },
+      files,
+      appsConfig,
+    );
+    executeTool({ id: "3", name: "register_api", input: { host: "a.com", secretName: "A_KEY2", injectKind: "bearer" } }, files, appsConfig);
+    const apis = JSON.parse(files.get("fas.json")!).apis;
+    expect(apis).toHaveLength(2); // a.com replaced, b.com kept
+    expect(apis.find((a: { host: string }) => a.host === "a.com").secretName).toBe("A_KEY2");
+  });
+
+  it("register_api is a file tool, not infra", () => {
+    expect(INFRA_TOOLS.has("register_api")).toBe(false);
+    expect(getToolDefinitions(appsConfig).some((t) => t.name === "register_api")).toBe(true);
+  });
+});
+
 describe("run_compliance_check", () => {
   it("apps template passes apps compliance (except APPNAME + Fraunces)", () => {
     const files = new Map(Object.entries(getTemplateFiles(appsConfig)));

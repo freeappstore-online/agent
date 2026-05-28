@@ -136,7 +136,7 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
 }
 
 /** Replace APPNAME (display name; id in package.json) + APPID (the slug, everywhere). */
-function applyPlaceholders(files: Map<string, string>, appId: string, appName: string): void {
+export function applyPlaceholders(files: Map<string, string>, appId: string, appName: string): void {
   for (const [path, content] of files) {
     if (!content.includes("APPNAME") && !content.includes("APPID")) continue;
     let next = content.replace(/APPID/g, appId);

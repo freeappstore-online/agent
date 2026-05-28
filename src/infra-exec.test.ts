@@ -1,7 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
 import { getConfig } from "./config";
 import type { DeployStatus } from "./deploy";
-import { executeInfraTool } from "./infra-exec";
+import { applyPlaceholders, executeInfraTool } from "./infra-exec";
+
+describe("applyPlaceholders", () => {
+  it("APPID -> the slug everywhere (so the SDK proxy path matches the deployed id)", () => {
+    const files = new Map([["web/src/App.tsx", 'initApp({ appId: "APPID" })']]);
+    applyPlaceholders(files, "weather-app", "Weather App");
+    expect(files.get("web/src/App.tsx")).toBe('initApp({ appId: "weather-app" })');
+  });
+
+  it("APPNAME -> display name in code, but the slug in package.json", () => {
+    const files = new Map([
+      ["web/index.html", "<title>APPNAME</title>"],
+      ["package.json", '{ "name": "@APPNAME/root" }'],
+    ]);
+    applyPlaceholders(files, "weather-app", "Weather App");
+    expect(files.get("web/index.html")).toBe("<title>Weather App</title>");
+    expect(files.get("package.json")).toBe('{ "name": "@weather-app/root" }');
+  });
+
+  it("leaves files without placeholders untouched", () => {
+    const files = new Map([["a.ts", "const x = 1;"]]);
+    applyPlaceholders(files, "id", "Name");
+    expect(files.get("a.ts")).toBe("const x = 1;");
+  });
+});
 
 const appsConfig = getConfig("apps");
 
