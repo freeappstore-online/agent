@@ -395,10 +395,72 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`,
 };
 
+// ── Path B deploy workflow (R2) ──
+//
+// Every agent-pushed repo carries this so GitHub Actions builds web/dist and
+// syncs it to r2://<bucket>/<nounPlural>/<repo>/ — the prefix the host Worker
+// (freeappstore-host / freegamestore-host) serves once the publish step writes
+// the D1 routes row. Mirrors the proven template-standalone deploy.yml.
+//
+// Uses plain `pnpm install` (NOT --frozen-lockfile): the agent scaffold ships
+// no lockfile. Org-level R2_* secrets (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY /
+// R2_ACCOUNT_ID) are inherited from the store org — public repos get them
+// (console/notes already deploy this way). Contains no APPNAME placeholder.
+function deployWorkflow(config: StoreConfig): string {
+  return `name: Deploy to R2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-\${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: pnpm build
+      - name: Verify build output
+        run: |
+          test -d ./web/dist || { echo "::error::No build output at web/dist"; exit 1; }
+          test -n "$(ls -A ./web/dist)" || { echo "::error::web/dist is empty"; exit 1; }
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: \${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: \${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: \${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          aws s3 sync ./web/dist "s3://${config.r2Bucket}/${config.nounPlural}/\${GITHUB_REPOSITORY##*/}/" \\
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \\
+            --delete \\
+            --no-progress
+          echo "Deployed ${config.nounPlural}/\${GITHUB_REPOSITORY##*/} from \${GITHUB_SHA::7} to R2 (Path B)"
+`;
+}
+
 // ── Public API ──
 
 export function getTemplateFiles(config: StoreConfig): Record<string, string> {
-  return { ...SHARED_FILES, ...(config.store === "games" ? GAME_FILES : APP_FILES) };
+  return {
+    ...SHARED_FILES,
+    ...(config.store === "games" ? GAME_FILES : APP_FILES),
+    ".github/workflows/deploy.yml": deployWorkflow(config),
+  };
 }
 
 export function substituteAppName(files: Record<string, string>, appId: string, displayName: string): Record<string, string> {

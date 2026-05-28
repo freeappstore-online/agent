@@ -14,6 +14,9 @@ export interface StoreConfig {
   categories: string;
   auditParam: string;
   cfProjectName: (id: string) => string;
+  /** R2 bucket the host Worker serves from (Path B). The scaffold's
+   *  deploy.yml syncs web/dist → r2://<r2Bucket>/<nounPlural>/<repo>/. */
+  r2Bucket: string;
 }
 
 const CONFIGS: Record<string, StoreConfig> = {
@@ -31,6 +34,7 @@ const CONFIGS: Record<string, StoreConfig> = {
     categories: "utilities, productivity, learning, lifestyle, finance, health, creative, social",
     auditParam: "app",
     cfProjectName: (id: string) => `free${id.replace(/-/g, "")}app`,
+    r2Bucket: "fas-apps",
   },
   games: {
     store: "games",
@@ -46,6 +50,7 @@ const CONFIGS: Record<string, StoreConfig> = {
     categories: "arcade, puzzle, strategy, racing, sports, cards, board, rpg, action, casual",
     auditParam: "game",
     cfProjectName: (id: string) => id,
+    r2Bucket: "fgs-games",
   },
 };
 
