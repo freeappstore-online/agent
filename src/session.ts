@@ -423,11 +423,34 @@ export class AgentSession implements DurableObject {
         deployStatus: session.deployStatus,
         appId: session.appId,
         appUrl: session.deployStatus?.phase === "live" ? session.deployStatus.appUrl : null,
+        devStatus: this.computeDevStatus(session),
       },
       200,
       request,
       this.config.domain,
     );
+  }
+
+  /**
+   * Coarse "what is the agent doing right now" for the My Apps list.
+   *   working   — a chat turn is actively streaming in this DO (pulsing)
+   *   deploying — provisioning/building/pushing
+   *   error     — last deploy failed (red)
+   *   idle      — finished / never started / disconnected (blank)
+   * `working` reflects chatInProgress, which stays true while the turn runs
+   * server-side even after the client disconnects — so the list shows the
+   * agent is still building after you've switched apps.
+   */
+  private computeDevStatus(session: SessionState): { state: string; detail: string } {
+    const phase = session.deployStatus?.phase;
+    const deploying = !!phase && !["live", "error"].includes(phase);
+    if (this.chatInProgress) return { state: "working", detail: "Building…" };
+    if (deploying) return { state: "deploying", detail: `Deploying — ${phase}` };
+    if (phase === "error") {
+      return { state: "error", detail: (session.deployStatus?.error || "Build failed").slice(0, 80) };
+    }
+    if (phase === "live") return { state: "idle", detail: "Live" };
+    return { state: "idle", detail: session.messages.length > 1 ? "Idle" : "Empty" };
   }
 
   /** GET /files — list files with sizes */
