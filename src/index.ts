@@ -88,7 +88,7 @@ export default {
 
     // For /chat: try to resolve API key from platform vault before forwarding.
     // If the browser sent a key, use it (backwards compat). If not, check vault.
-    let forwardBody: BodyInit | undefined = request.method === "POST" ? request.body : undefined;
+    let forwardBody: BodyInit | undefined = request.method === "POST" ? (request.body ?? undefined) : undefined;
 
     if (route === "chat" && request.method === "POST" && env.PLATFORM) {
       try {
@@ -100,10 +100,9 @@ export default {
         if (body.aiConfig && !body.aiConfig.apiKey && authHeader) {
           const provider = mapProviderToVault(body.aiConfig.provider);
           if (provider) {
-            const vaultRes = await env.PLATFORM.fetch(
-              `https://api.freeappstore.online/v1/keys/resolve/${provider}`,
-              { headers: { Authorization: authHeader } },
-            );
+            const vaultRes = await env.PLATFORM.fetch(`https://api.freeappstore.online/v1/keys/resolve/${provider}`, {
+              headers: { Authorization: authHeader },
+            });
             if (vaultRes.ok) {
               const { key } = (await vaultRes.json()) as { key: string | null };
               if (key) body.aiConfig.apiKey = key;

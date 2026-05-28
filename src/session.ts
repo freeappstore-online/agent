@@ -191,12 +191,7 @@ export class AgentSession implements DurableObject {
     }>();
 
     if (!body.message || !body.aiConfig?.provider || !body.aiConfig?.model) {
-      return json(
-        { error: "message, aiConfig.provider, and aiConfig.model are required" },
-        400,
-        request,
-        this.config.domain,
-      );
+      return json({ error: "message, aiConfig.provider, and aiConfig.model are required" }, 400, request, this.config.domain);
     }
     // apiKey may be empty if the worker resolved it from the platform vault
     // and injected it into the body before forwarding to the DO.
