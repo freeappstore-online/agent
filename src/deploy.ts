@@ -94,13 +94,13 @@ export async function deployApp(
     await sleep(8000);
     try {
       const runs = await ghApi(`/repos/${repo}/actions/runs?per_page=1&status=completed`);
-      const run = runs.workflow_runs?.[0];
-      if (run) {
-        if (run.conclusion === "success") {
+      const latestRun = runs.workflow_runs?.[0];
+      if (latestRun) {
+        if (latestRun.conclusion === "success") {
           onStatus({ phase: "live", appUrl });
           return;
         }
-        if (run.conclusion === "failure") {
+        if (latestRun.conclusion === "failure") {
           onStatus({ phase: "error", error: `GitHub Actions deploy failed. Check: https://github.com/${repo}/actions` });
           return;
         }

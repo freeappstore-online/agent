@@ -1,7 +1,7 @@
 /** Shared GitHub API helper. */
 export function makeGhApi(token: string, agentName: string) {
   return async (path: string, method = "GET", body?: unknown): Promise<any> => {
-    const res = await fetch(`https://api.github.com${path}`, {
+    const response = await fetch(`https://api.github.com${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -11,6 +11,6 @@ export function makeGhApi(token: string, agentName: string) {
       },
       body: body ? JSON.stringify(body) : undefined,
     });
-    return res.json();
+    return response.json();
   };
 }

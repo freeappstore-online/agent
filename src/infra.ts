@@ -12,11 +12,11 @@ export async function checkDeployStatus(appId: string, env: DeployEnv, config: S
   if (!runs.workflow_runs?.length) {
     return `No workflow runs found for ${repo}. The ${config.noun} may not have been deployed yet.`;
   }
-  const run = runs.workflow_runs[0];
-  const status = run.status === "completed" ? run.conclusion : run.status;
-  const url = `https://${appId}.${config.domain}`;
-  const created = run.created_at ? new Date(run.created_at).toISOString() : "unknown";
-  return `Latest deploy: ${status}\nURL: ${url}\nCreated: ${created}\nWorkflow: ${run.name || "unknown"}`;
+  const latestRun = runs.workflow_runs[0];
+  const runStatus = latestRun.status === "completed" ? latestRun.conclusion : latestRun.status;
+  const appUrl = `https://${appId}.${config.domain}`;
+  const created = latestRun.created_at ? new Date(latestRun.created_at).toISOString() : "unknown";
+  return `Latest deploy: ${runStatus}\nURL: ${appUrl}\nCreated: ${created}\nWorkflow: ${latestRun.name || "unknown"}`;
 }
 
 /** List all items from the store registry. */
@@ -36,13 +36,13 @@ export async function listDeployed(env: DeployEnv, config: StoreConfig): Promise
 /** Fetch a URL and return the response. Redirects are not followed to prevent SSRF bypass. */
 export async function fetchUrl(url: string, method: string, agentName: string): Promise<string> {
   try {
-    const res = await fetch(url, { method, headers: { "User-Agent": agentName }, redirect: "manual" });
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("Location") || "(none)";
-      return `${res.status} Redirect → ${location}\n(Redirects are not followed for security.)`;
+    const httpRes = await fetch(url, { method, headers: { "User-Agent": agentName }, redirect: "manual" });
+    if (httpRes.status >= 300 && httpRes.status < 400) {
+      const location = httpRes.headers.get("Location") || "(none)";
+      return `${httpRes.status} Redirect → ${location}\n(Redirects are not followed for security.)`;
     }
-    const body = await res.text();
-    return `${res.status} ${res.statusText}\n${body.slice(0, 2000)}`;
+    const responseBody = await httpRes.text();
+    return `${httpRes.status} ${httpRes.statusText}\n${responseBody.slice(0, 2000)}`;
   } catch (err) {
     return `Fetch error: ${err}`;
   }
@@ -54,11 +54,11 @@ export async function getBuildLogs(appId: string, env: DeployEnv, config: StoreC
   const repo = `${config.org}/${appId}`;
   const runs = await ghApi(`/repos/${repo}/actions/runs?per_page=1`);
   if (!runs.workflow_runs?.length) return `No workflow runs found for ${repo}.`;
-  const run = runs.workflow_runs[0];
-  const status = run.status === "completed" ? run.conclusion : run.status;
+  const latestRun = runs.workflow_runs[0];
+  const runStatus = latestRun.status === "completed" ? latestRun.conclusion : latestRun.status;
 
   // Fetch jobs for this run to get step-level detail
-  const jobs = await ghApi(`/repos/${repo}/actions/runs/${run.id}/jobs`);
+  const jobs = await ghApi(`/repos/${repo}/actions/runs/${latestRun.id}/jobs`);
   const jobLines: string[] = [];
   for (const job of jobs.jobs || []) {
     const jobStatus = job.status === "completed" ? job.conclusion : job.status;
@@ -70,7 +70,7 @@ export async function getBuildLogs(appId: string, env: DeployEnv, config: StoreC
     }
   }
 
-  return `Run ${String(run.id).slice(0, 8)} — workflow: ${run.name}, status: ${status}\n\n${jobLines.join("\n") || "(no job details)"}`;
+  return `Run ${String(latestRun.id).slice(0, 8)} — workflow: ${latestRun.name}, status: ${runStatus}\n\n${jobLines.join("\n") || "(no job details)"}`;
 }
 
 /** Get GitHub Actions CI check results for a repo. */
@@ -96,20 +96,20 @@ export async function getCIResults(appId: string, env: DeployEnv, config: StoreC
 /** Get quality audit results from the store's audit API. */
 export async function getAuditResults(appId: string, config: StoreConfig): Promise<string> {
   try {
-    const res = await fetch(`https://api.${config.domain}/v1/audit?${config.auditParam}=${appId}`, {
+    const auditRes = await fetch(`https://api.${config.domain}/v1/audit?${config.auditParam}=${appId}`, {
       headers: { "User-Agent": config.agentName },
     });
-    if (!res.ok) return `Audit API returned ${res.status}. The ${config.noun} may not have been audited yet.`;
-    const data = (await res.json()) as {
+    if (!auditRes.ok) return `Audit API returned ${auditRes.status}. The ${config.noun} may not have been audited yet.`;
+    const auditData = (await auditRes.json()) as {
       summary?: { pass: number; warn: number; fail: number };
       checks?: { name: string; status: string; detail?: string }[];
     };
 
-    if (data.summary) {
-      const s = data.summary;
+    if (auditData.summary) {
+      const s = auditData.summary;
       const lines = [`Audit for ${appId}: ${s.pass} pass, ${s.warn} warn, ${s.fail} fail`];
-      if (data.checks) {
-        for (const c of data.checks) {
+      if (auditData.checks) {
+        for (const c of auditData.checks) {
           const icon = c.status === "pass" ? "PASS" : c.status === "warn" ? "WARN" : "FAIL";
           lines.push(`  ${icon}: ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
         }
@@ -117,7 +117,7 @@ export async function getAuditResults(appId: string, config: StoreConfig): Promi
       return lines.join("\n");
     }
 
-    return JSON.stringify(data, null, 2).slice(0, 2000);
+    return JSON.stringify(auditData, null, 2).slice(0, 2000);
   } catch (err) {
     return `Could not reach audit API: ${err}`;
   }

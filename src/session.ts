@@ -50,24 +50,29 @@ export class AgentSession implements DurableObject {
     this.config = getConfig(env.STORE);
   }
 
+  private freshSession(overrides?: Partial<SessionState>): SessionState {
+    return {
+      messages: [],
+      files: { ...getTemplateFiles(this.config) },
+      tokenUsage: { input: 0, output: 0 },
+      deployStatus: null,
+      appId: null,
+      appName: null,
+      errors: [],
+      ownerId: null,
+      tokenHash: null,
+      tokenValidatedAt: null,
+      ...overrides,
+    };
+  }
+
   private async load(): Promise<SessionState> {
     if (this.session) return this.session;
     const stored = await this.state.storage.get<SessionState>("session");
     if (stored) {
       this.session = stored;
     } else {
-      this.session = {
-        messages: [],
-        files: { ...getTemplateFiles(this.config) },
-        tokenUsage: { input: 0, output: 0 },
-        deployStatus: null,
-        appId: null,
-        appName: null,
-        errors: [],
-        ownerId: null,
-        tokenHash: null,
-        tokenValidatedAt: null,
-      };
+      this.session = this.freshSession();
       await this.save();
     }
     // Migrate old sessions
@@ -557,21 +562,11 @@ export class AgentSession implements DurableObject {
 
   /** POST /reset — start over */
   private async handleReset(request: Request): Promise<Response> {
-    const prevOwnerId = this.session?.ownerId ?? null;
-    const prevTokenHash = this.session?.tokenHash ?? null;
-    const prevTokenValidatedAt = this.session?.tokenValidatedAt ?? null;
-    this.session = {
-      messages: [],
-      files: { ...getTemplateFiles(this.config) },
-      tokenUsage: { input: 0, output: 0 },
-      deployStatus: null,
-      appId: null,
-      appName: null,
-      errors: [],
-      ownerId: prevOwnerId,
-      tokenHash: prevTokenHash,
-      tokenValidatedAt: prevTokenValidatedAt,
-    };
+    this.session = this.freshSession({
+      ownerId: this.session?.ownerId ?? null,
+      tokenHash: this.session?.tokenHash ?? null,
+      tokenValidatedAt: this.session?.tokenValidatedAt ?? null,
+    });
     await this.save();
     return json({ ok: true }, 200, request, this.config.domain);
   }

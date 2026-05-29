@@ -10,17 +10,17 @@ import { getSystemPrompt } from "./template";
 import { executeTool, getToolDefinitions, INFRA_TOOLS } from "./tools";
 
 function createAdapter(config: AIConfig): ProviderAdapter {
-  const temp = config.temperature ?? 0.7;
-  const maxTok = config.maxTokens ?? 16384;
+  const providerTemp = config.temperature ?? 0.7;
+  const providerMaxTokens = config.maxTokens ?? 16384;
   switch (config.provider) {
     case "anthropic":
-      return new AnthropicAdapter(config.apiKey, config.model, temp, maxTok);
+      return new AnthropicAdapter(config.apiKey, config.model, providerTemp, providerMaxTokens);
     case "openai":
-      return new OpenAIAdapter(config.apiKey, config.model, undefined, temp, maxTok);
+      return new OpenAIAdapter(config.apiKey, config.model, undefined, providerTemp, providerMaxTokens);
     case "google":
-      return new GoogleAdapter(config.apiKey, config.model, temp, maxTok);
+      return new GoogleAdapter(config.apiKey, config.model, providerTemp, providerMaxTokens);
     case "github":
-      return new GitHubModelsAdapter(config.apiKey, config.model, temp, maxTok);
+      return new GitHubModelsAdapter(config.apiKey, config.model, providerTemp, providerMaxTokens);
   }
 }
 
@@ -207,11 +207,11 @@ export async function runAgentTurn(
     // Execute file tools
     const results: ToolResult[] = [];
     for (const tc of fileToolCalls) {
-      const result = executeTool(tc, files, storeConfig);
+      const toolOutput = executeTool(tc, files, storeConfig);
       // Truncate large results in conversation history (e.g. read_file returning full file)
-      const truncated = { ...result, content: result.content.slice(0, 1500) };
+      const truncated = { ...toolOutput, content: toolOutput.content.slice(0, 1500) };
       results.push(truncated);
-      await send({ type: "tool_result", data: JSON.stringify({ id: tc.id, tool: tc.name, result: result.content.slice(0, 400) }) });
+      await send({ type: "tool_result", data: JSON.stringify({ id: tc.id, tool: tc.name, result: toolOutput.content.slice(0, 400) }) });
     }
 
     // Collect infra tools — session will execute them and build the
