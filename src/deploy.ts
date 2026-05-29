@@ -13,10 +13,6 @@ export interface DeployConfig {
 
 export interface DeployEnv {
   GITHUB_TOKEN: string;
-  CF_API_TOKEN: string;
-  CF_ACCOUNT_ID: string;
-  CF_GLOBAL_KEY: string;
-  CF_EMAIL: string;
 }
 
 interface DeployStep {

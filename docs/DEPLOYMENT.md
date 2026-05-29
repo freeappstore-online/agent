@@ -1,0 +1,150 @@
+# VibeCode Agent — Deployment
+
+## Services
+
+| Service | URL | Source | Deploys via |
+|---------|-----|--------|-------------|
+| Agent worker | agent.freeappstore.online | `platform/agent/` | `bash scripts/deploy.sh` (safe, doesn't kill DOs) |
+| API (auth) | api.freeappstore.online | `platform/api/` | `npx wrangler deploy` |
+| Store site | freeappstore.online | `platform/freeappstore/` | `git push` (CF Pages auto-build) |
+| VibeCode | create.freeappstore.online | `platform/create/` | `git push` (CF Pages auto-build) |
+| Admin | admin.freeappstore.online | `platform/admin/` | `npx wrangler deploy` |
+| Publisher | publish.freeappstore.online | `platform/publisher/` | `npx wrangler deploy` |
+
+## Deploy the agent worker
+
+```bash
+cd ~/dev/fas/platform/agent
+pnpm install
+npx tsc --noEmit          # typecheck
+bash scripts/deploy.sh    # safe deploy (wrangler versions upload, doesn't kill active DOs)
+```
+
+## Deploy the API
+
+```bash
+cd ~/dev/fas/platform/api
+pnpm install
+npx wrangler deploy
+```
+
+## Deploy the store site
+
+```bash
+cd ~/dev/fas/platform/freeappstore
+git add -A && git commit -m "..." && git push
+# CF Pages auto-builds from main
+```
+
+The build process (`node build.js`) generates:
+- `dist/index.html` — app catalog from registry.json + templates
+- `dist/apps/*.html` — per-app detail pages
+- `dist/quality.html` — quality dashboard
+- Copies static files listed in `filesToCopy` array in build.js
+
+**Important:** New HTML files must be added to `filesToCopy` in build.js or they
+won't be copied to dist.
+
+## Run tests
+
+```bash
+cd ~/dev/fas/platform/agent
+bash test.sh                    # 15 integration tests against production
+bash test.sh http://localhost:8787  # test against local dev server
+```
+
+## Local development
+
+```bash
+cd ~/dev/fas/platform/agent
+npx wrangler dev                # starts local dev server on :8787
+```
+
+For local dev, create a `.dev.vars` file (gitignored):
+```
+GITHUB_TOKEN=ghp_xxx
+CF_API_TOKEN=xxx
+```
+
+## Wrangler config
+
+### Agent worker (wrangler.toml)
+```toml
+name = "freeappstore-agent"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+workers_dev = true
+
+[[routes]]
+pattern = "agent.freeappstore.online/*"
+zone_name = "freeappstore.online"
+
+[durable_objects]
+bindings = [
+  { name = "SESSION", class_name = "AgentSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AgentSession"]
+
+[vars]
+CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
+```
+
+### API worker (wrangler.jsonc)
+```jsonc
+{
+  "name": "freeappstore-api",
+  "main": "src/index.ts",
+  "routes": [{ "pattern": "api.freeappstore.online", "custom_domain": true }],
+  "vars": { "GITHUB_CLIENT_ID": "Ov23liuUpYPXc1ikEFm2" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "freeappstore-db",
+    "database_id": "2e998d10-6c2f-4e35-8dc8-9305888a5f58"
+  }]
+}
+```
+
+## API Worker
+
+The API worker (`api.freeappstore.online`) handles **platform auth only** — no app-specific routes.
+Routes: `/auth/github/url`, `/auth/github/callback`, `/auth/me`, `/auth/github-token`, `/auth/signout`, `/auth/delete`, `/health`.
+
+Individual apps must be fully client-side (localStorage) or have their own worker if they need a backend.
+
+## D1 Database
+
+The API uses a D1 database (`freeappstore-db`) with these tables:
+- `users` — id, email, name, photo_url, provider
+- `sessions` — token, user_id, expires_at, github_token
+- `user_roles` — user_id, role, app
+- `user_data` — user_id, app, key, value
+
+Migrations are in `platform/api/migrations/`. Apply with:
+```bash
+cd ~/dev/fas/platform/api
+npx wrangler d1 execute freeappstore-db --remote --command "SQL HERE"
+```
+
+## GitHub OAuth App
+
+- **App ID:** 3576238
+- **Client ID:** `Ov23liuUpYPXc1ikEFm2`
+- **Settings:** https://github.com/organizations/freeappstore-online/settings/applications/3576238
+- **Callback URL:** `https://api.freeappstore.online/auth/github/callback`
+- **Scopes requested:** `read:user`, `user:email`, `models:read`
+
+The callback URL MUST be set in the GitHub OAuth App settings. Without it,
+sign-in redirects fail with "redirect_uri not associated with this application".
+
+## Custom domains
+
+| Subdomain | Service | Setup method |
+|-----------|---------|-------------|
+| agent.freeappstore.online | Agent worker | Workers Domains API (auto DNS) |
+| api.freeappstore.online | API worker | Custom domain in wrangler.jsonc |
+| admin.freeappstore.online | Admin worker | Route in wrangler.toml |
+| publish.freeappstore.online | Publisher worker | Route in wrangler.toml |
+| *.freeappstore.online (apps) | CF Pages | CF Pages custom domain + DNS CNAME |

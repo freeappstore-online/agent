@@ -395,7 +395,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`,
 };
 
-// ── Path B deploy workflow (R2) ──
+// ── Deploy workflow (R2) ──
 //
 // Every agent-pushed repo carries this so GitHub Actions builds web/dist and
 // syncs it to r2://<bucket>/<nounPlural>/<repo>/ — the prefix the host Worker
@@ -449,7 +449,7 @@ jobs:
             --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \\
             --delete \\
             --no-progress
-          echo "Deployed ${config.nounPlural}/\${GITHUB_REPOSITORY##*/} from \${GITHUB_SHA::7} to R2 (Path B)"
+          echo "Deployed ${config.nounPlural}/\${GITHUB_REPOSITORY##*/} from \${GITHUB_SHA::7} to R2"
 `;
 }
 

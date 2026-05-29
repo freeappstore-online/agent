@@ -10,10 +10,6 @@ const gamesConfig = getConfig("games");
 
 const mockEnv = {
   GITHUB_TOKEN: "ghp_test",
-  CF_API_TOKEN: "cf_test",
-  CF_ACCOUNT_ID: "test-account",
-  CF_GLOBAL_KEY: "test-key",
-  CF_EMAIL: "test@test.com",
 };
 
 let originalFetch: typeof fetch;

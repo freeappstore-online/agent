@@ -13,8 +13,8 @@ export interface StoreConfig {
   accentColor: string;
   categories: string;
   auditParam: string;
-  /** R2 bucket the host Worker serves from (Path B). The scaffold's
-   *  deploy.yml syncs web/dist → r2://<r2Bucket>/<nounPlural>/<repo>/. */
+  /** R2 bucket the host Worker serves from. The scaffold's deploy.yml
+   *  syncs web/dist → r2://<r2Bucket>/<nounPlural>/<repo>/. */
   r2Bucket: string;
 }
 

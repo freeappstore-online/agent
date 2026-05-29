@@ -39,10 +39,6 @@ function makeCtx(
     files: new Map<string, string>(),
     env: {
       GITHUB_TOKEN: "test-token",
-      CF_API_TOKEN: "test-cf",
-      CF_ACCOUNT_ID: "test-account",
-      CF_GLOBAL_KEY: "test-key",
-      CF_EMAIL: "test@test.com",
     },
     config: appsConfig,
     onDeployStatus: vi.fn() as (status: DeployStatus) => void,
