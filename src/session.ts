@@ -161,6 +161,9 @@ export class AgentSession implements DurableObject {
       if (path === "/errors" && request.method === "GET") {
         return this.handleErrors(request);
       }
+      if (path === "/import" && request.method === "POST") {
+        return this.handleImport(request);
+      }
       if (path === "/reset" && request.method === "POST") {
         return this.handleReset(request);
       }
@@ -522,6 +525,87 @@ export class AgentSession implements DurableObject {
       request,
       this.config.domain,
     );
+  }
+
+  /** POST /import — load files from an existing GitHub repo into this session.
+   *  Body: { appId: string }. Fetches the repo tree + file contents from
+   *  GitHub and replaces the session's files so the agent can see and edit
+   *  the existing code. Only works on fresh sessions (no messages yet). */
+  private async handleImport(request: Request): Promise<Response> {
+    const body = await request.json<{ appId?: string }>();
+    const appId = body?.appId;
+    if (!appId || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(appId)) {
+      return json({ error: "valid appId required" }, 400, request, this.config.domain);
+    }
+    const session = await this.load();
+    if (session.appId && session.appId !== appId) {
+      return json({ error: "session already linked to a different app" }, 409, request, this.config.domain);
+    }
+
+    const repo = `${this.config.org}/${appId}`;
+    const ghHeaders = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": this.config.agentName,
+      ...(this.env.GITHUB_TOKEN ? { Authorization: `Bearer ${this.env.GITHUB_TOKEN}` } : {}),
+    };
+
+    // Fetch recursive tree
+    const treeRes = await fetch(`https://api.github.com/repos/${repo}/git/trees/main?recursive=1`, { headers: ghHeaders });
+    if (!treeRes.ok) {
+      return json({ error: `Could not read repo ${repo}: ${treeRes.status}` }, 404, request, this.config.domain);
+    }
+    const treeData = (await treeRes.json()) as { tree: { path: string; type: string; size?: number }[] };
+
+    // Filter to text files under a reasonable size
+    const textExts = new Set(["ts", "tsx", "js", "jsx", "json", "html", "css", "md", "yaml", "yml", "toml", "txt", "svg", "sh"]);
+    const candidates = treeData.tree.filter((e) => {
+      if (e.type !== "blob") return false;
+      if (e.path.includes("node_modules/") || e.path.includes("dist/") || e.path.startsWith(".")) return false;
+      if (e.path === "pnpm-lock.yaml" || e.path === "package-lock.json") return false;
+      const ext = e.path.split(".").pop()?.toLowerCase() ?? "";
+      if (!textExts.has(ext)) return false;
+      if ((e.size ?? 0) > 100_000) return false;
+      return true;
+    });
+
+    if (candidates.length === 0) {
+      return json({ error: "No source files found in repo" }, 404, request, this.config.domain);
+    }
+
+    // Fetch file contents (cap at 80 files to stay within DO CPU limits)
+    const toFetch = candidates.slice(0, 80);
+    const files: Record<string, string> = {};
+    const batchSize = 10;
+    for (let i = 0; i < toFetch.length; i += batchSize) {
+      const batch = toFetch.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (f) => {
+          const res = await fetch(`https://api.github.com/repos/${repo}/contents/${f.path}?ref=main`, {
+            headers: { ...ghHeaders, Accept: "application/vnd.github.raw+json" },
+          });
+          if (!res.ok) return null;
+          return { path: f.path, content: await res.text() };
+        }),
+      );
+      for (const r of results) {
+        if (r) files[r.path] = r.content;
+      }
+    }
+
+    session.files = files;
+    session.appId = appId;
+    session.appName = appId;
+    session.deployStatus = { phase: "live", appUrl: `https://${appId}.${this.config.domain}` } as DeployStatus;
+    // Set a system context so the agent knows it's editing an existing app
+    if (session.messages.length === 0) {
+      session.messages.push({
+        role: "system",
+        content: `You are editing an existing app "${appId}" deployed at https://${appId}.${this.config.domain}. The app's source code has been loaded. Use read_file to examine the code, write_file to make changes, and push_update to deploy.`,
+      });
+    }
+    await this.save();
+
+    return json({ ok: true, fileCount: Object.keys(files).length }, 200, request, this.config.domain);
   }
 
   /** POST /reset — start over */
