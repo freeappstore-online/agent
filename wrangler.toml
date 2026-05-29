@@ -23,12 +23,9 @@ binding = "PLATFORM"
 service = "freeappstore-api"
 
 [vars]
-CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
 STORE = "apps"
 VAPID_PUBLIC_KEY = "BB9nIKmrVFJQJWZ4MiXzv3eN2UfGtuXESqVlQMobPiZiTmS8cQuldiXNreIV03dCo3Jkkflk6UDoAzWMvhNXCuw"
 
 # Secrets (set via `wrangler secret put`):
 # GITHUB_TOKEN       — org-level PAT for provisioning + pushing code
-# CF_API_TOKEN       — Cloudflare API token for Pages/DNS
-# CF_GLOBAL_KEY      — Cloudflare Global API key (for DNS)
-# CF_EMAIL           — Cloudflare account email (for DNS)
+# VAPID_PRIVATE_KEY  — VAPID private key for web push notifications
