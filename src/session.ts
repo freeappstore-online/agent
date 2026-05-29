@@ -4,6 +4,7 @@
 import { runAgentTurn } from "./agent";
 import type { StoreConfig } from "./config";
 import { getConfig } from "./config";
+import { corsHeaders, json } from "./cors";
 import type { DeployEnv, DeployStatus } from "./deploy";
 import type { Env } from "./index";
 import { executeInfraTool } from "./infra-exec";
@@ -240,10 +241,7 @@ export class AgentSession implements DurableObject {
     const writer = writable.getWriter();
 
     // Build deploy env directly from DO's env bindings (no header passing)
-    const deployEnv: DeployEnv | null =
-      this.env.GITHUB_TOKEN
-        ? { GITHUB_TOKEN: this.env.GITHUB_TOKEN }
-        : null;
+    const deployEnv: DeployEnv | null = this.env.GITHUB_TOKEN ? { GITHUB_TOKEN: this.env.GITHUB_TOKEN } : null;
 
     const config = this.config;
 
@@ -530,7 +528,7 @@ export class AgentSession implements DurableObject {
   /** POST /import — load files from an existing GitHub repo into this session.
    *  Body: { appId: string }. Fetches the repo tree + file contents from
    *  GitHub and replaces the session's files so the agent can see and edit
-   *  the existing code. Only works on fresh sessions (no messages yet). */
+   *  the existing code. */
   private async handleImport(request: Request): Promise<Response> {
     const body = await request.json<{ appId?: string }>();
     const appId = body?.appId;
@@ -543,66 +541,15 @@ export class AgentSession implements DurableObject {
     }
 
     const repo = `${this.config.org}/${appId}`;
-    const ghHeaders = {
-      Accept: "application/vnd.github+json",
-      "User-Agent": this.config.agentName,
-      ...(this.env.GITHUB_TOKEN ? { Authorization: `Bearer ${this.env.GITHUB_TOKEN}` } : {}),
-    };
-
-    // Fetch recursive tree
-    const treeRes = await fetch(`https://api.github.com/repos/${repo}/git/trees/main?recursive=1`, { headers: ghHeaders });
-    if (!treeRes.ok) {
-      return json({ error: `Could not read repo ${repo}: ${treeRes.status}` }, 404, request, this.config.domain);
-    }
-    const treeData = (await treeRes.json()) as { tree: { path: string; type: string; size?: number }[] };
-
-    // Filter to text files under a reasonable size
-    const textExts = new Set(["ts", "tsx", "js", "jsx", "json", "html", "css", "md", "yaml", "yml", "toml", "txt", "svg", "sh"]);
-    const candidates = treeData.tree.filter((e) => {
-      if (e.type !== "blob") return false;
-      if (e.path.includes("node_modules/") || e.path.includes("dist/") || e.path.startsWith(".")) return false;
-      if (e.path === "pnpm-lock.yaml" || e.path === "package-lock.json") return false;
-      const ext = e.path.split(".").pop()?.toLowerCase() ?? "";
-      if (!textExts.has(ext)) return false;
-      if ((e.size ?? 0) > 100_000) return false;
-      return true;
-    });
-
-    if (candidates.length === 0) {
-      return json({ error: "No source files found in repo" }, 404, request, this.config.domain);
-    }
-
-    // Fetch file contents (cap at 80 files to stay within DO CPU limits)
-    const toFetch = candidates.slice(0, 80);
-    const files: Record<string, string> = {};
-    const batchSize = 10;
-    for (let i = 0; i < toFetch.length; i += batchSize) {
-      const batch = toFetch.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map(async (f) => {
-          const res = await fetch(`https://api.github.com/repos/${repo}/contents/${f.path}?ref=main`, {
-            headers: { ...ghHeaders, Accept: "application/vnd.github.raw+json" },
-          });
-          if (!res.ok) return null;
-          return { path: f.path, content: await res.text() };
-        }),
-      );
-      for (const r of results) {
-        if (r) files[r.path] = r.content;
-      }
+    const files = await fetchRepoFiles(repo, this.config.agentName, this.env.GITHUB_TOKEN);
+    if (!files) {
+      return json({ error: `Could not read repo ${repo}` }, 404, request, this.config.domain);
     }
 
     session.files = files;
     session.appId = appId;
     session.appName = appId;
     session.deployStatus = { phase: "live", appUrl: `https://${appId}.${this.config.domain}` } as DeployStatus;
-    // Set a system context so the agent knows it's editing an existing app
-    if (session.messages.length === 0) {
-      session.messages.push({
-        role: "system",
-        content: `You are editing an existing app "${appId}" deployed at https://${appId}.${this.config.domain}. The app's source code has been loaded. Use read_file to examine the code, write_file to make changes, and push_update to deploy.`,
-      });
-    }
     await this.save();
 
     return json({ ok: true, fileCount: Object.keys(files).length }, 200, request, this.config.domain);
@@ -676,28 +623,39 @@ async function hashToken(token: string): Promise<string> {
     .join("");
 }
 
-function corsHeaders(request: Request, domain: string): Record<string, string> {
-  const origin = request.headers.get("Origin");
-  const allowed =
-    origin &&
-    (origin.endsWith(`.${domain}`) ||
-      origin === `https://${domain}` ||
-      origin.startsWith("http://localhost"))
-      ? origin
-      : `https://${domain}`;
-  return {
-    "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-  };
+const IMPORTABLE_EXTS = new Set(["ts", "tsx", "js", "jsx", "json", "html", "css", "md", "yaml", "yml", "toml", "txt", "svg", "sh"]);
+const SKIP_PATHS = ["node_modules/", "dist/"];
+const SKIP_FILES = new Set(["pnpm-lock.yaml", "package-lock.json"]);
+
+function isImportable(e: { path: string; type: string; size?: number }): boolean {
+  if (e.type !== "blob") return false;
+  if (e.path.startsWith(".") || SKIP_PATHS.some((p) => e.path.includes(p))) return false;
+  if (SKIP_FILES.has(e.path)) return false;
+  const ext = e.path.split(".").pop()?.toLowerCase() ?? "";
+  return IMPORTABLE_EXTS.has(ext) && (e.size ?? 0) <= 100_000;
 }
 
-function json(data: unknown, status: number, request: Request, domain: string): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders(request, domain) },
-  });
+async function fetchRepoFiles(repo: string, agentName: string, token?: string): Promise<Record<string, string> | null> {
+  const ghHeaders: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": agentName };
+  if (token) ghHeaders.Authorization = `Bearer ${token}`;
+
+  const treeRes = await fetch(`https://api.github.com/repos/${repo}/git/trees/main?recursive=1`, { headers: ghHeaders });
+  if (!treeRes.ok) return null;
+  const treeData = (await treeRes.json()) as { tree: { path: string; type: string; size?: number }[] };
+  const candidates = treeData.tree.filter(isImportable).slice(0, 80);
+  if (candidates.length === 0) return null;
+
+  const files: Record<string, string> = {};
+  const rawHeaders = { ...ghHeaders, Accept: "application/vnd.github.raw+json" };
+  for (let i = 0; i < candidates.length; i += 10) {
+    const batch = candidates.slice(i, i + 10);
+    const results = await Promise.all(
+      batch.map(async (f) => {
+        const fileRes = await fetch(`https://api.github.com/repos/${repo}/contents/${f.path}?ref=main`, { headers: rawHeaders });
+        return fileRes.ok ? { path: f.path, content: await fileRes.text() } : null;
+      }),
+    );
+    for (const r of results) if (r) files[r.path] = r.content;
+  }
+  return files;
 }

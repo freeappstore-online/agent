@@ -2,20 +2,7 @@
 
 import type { StoreConfig } from "./config";
 import type { DeployEnv } from "./deploy";
-
-function makeGhApi(token: string, agentName: string) {
-  return async (path: string) => {
-    const res = await fetch(`https://api.github.com${path}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": agentName,
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-    return res.json() as Promise<any>;
-  };
-}
+import { makeGhApi } from "./github";
 
 /** Check the latest deployment status via GitHub Actions. */
 export async function checkDeployStatus(appId: string, env: DeployEnv, config: StoreConfig): Promise<string> {

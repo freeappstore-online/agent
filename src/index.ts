@@ -1,6 +1,7 @@
 /** Worker entry — routes requests to the correct Durable Object session. */
 
 import { getConfig } from "./config";
+import { corsHeaders } from "./cors";
 
 export { AgentSession } from "./session";
 
@@ -22,25 +23,6 @@ function mapProviderToVault(provider: string): string | null {
     google: "google-ai",
   };
   return map[provider] ?? null;
-}
-
-function corsHeaders(request: Request, domain: string): Record<string, string> {
-  const origin = request.headers.get("Origin");
-  const allowed =
-    origin &&
-    (origin.endsWith(`.${domain}`) ||
-      origin === `https://${domain}` ||
-      origin.startsWith("http://localhost"))
-      ? origin
-      : `https://${domain}`;
-  return {
-    "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-  };
 }
 
 export default {
@@ -68,7 +50,7 @@ export default {
     }
 
     // Routes: /session/:id/chat, /session/:id/status, /session/:id/files, /session/:id/reset
-    const match = path.match(/^\/session\/([a-zA-Z0-9_-]{1,64})\/(chat|status|files|history|errors|reset|push-subscribe)$/);
+    const match = path.match(/^\/session\/([a-zA-Z0-9_-]{1,64})\/(chat|status|files|history|errors|import|reset|push-subscribe)$/);
     if (!match) {
       return new Response(JSON.stringify({ error: "not found", hint: "Use /session/:id/chat" }), {
         status: 404,

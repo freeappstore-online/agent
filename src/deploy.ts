@@ -1,6 +1,7 @@
 /** Deploy: provision via GitHub APIs, then push all files. */
 
 import type { StoreConfig } from "./config";
+import { makeGhApi } from "./github";
 
 export interface DeployConfig {
   id: string;
@@ -27,22 +28,6 @@ export type DeployStatus =
   | { phase: "building"; deployUrl: string }
   | { phase: "live"; appUrl: string }
   | { phase: "error"; error: string };
-
-function makeGhApi(token: string, agentName: string) {
-  return async (path: string, method = "GET", body?: unknown) => {
-    const res = await fetch(`https://api.github.com${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": agentName,
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return res.json() as Promise<any>;
-  };
-}
 
 /** Deploy = create repo + push code. No DNS, no registry.
  *  Those are for PUBLISH (separate action). */
@@ -108,7 +93,9 @@ export async function deployApp(
           return;
         }
       }
-    } catch {}
+    } catch {
+      /* GH API transient error — retry on next poll */
+    }
   }
   onStatus({ phase: "live", appUrl }); // timeout — assume deploying
 }
