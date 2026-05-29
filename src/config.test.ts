@@ -42,15 +42,4 @@ describe("getConfig", () => {
     expect(c.store).toBe("apps");
   });
 
-  it("apps cfProjectName adds free...app prefix", () => {
-    const c = getConfig("apps");
-    expect(c.cfProjectName("meditation-timer")).toBe("freemeditationtimerapp");
-    expect(c.cfProjectName("notes")).toBe("freenotesapp");
-  });
-
-  it("games cfProjectName returns id unchanged", () => {
-    const c = getConfig("games");
-    expect(c.cfProjectName("space-invaders")).toBe("space-invaders");
-    expect(c.cfProjectName("chess")).toBe("chess");
-  });
 });

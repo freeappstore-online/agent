@@ -1,4 +1,4 @@
-/** Deploy: provision via CF/GitHub APIs, then push all files. */
+/** Deploy: provision via GitHub APIs, then push all files. */
 
 import type { StoreConfig } from "./config";
 
@@ -32,15 +32,6 @@ export type DeployStatus =
   | { phase: "live"; appUrl: string }
   | { phase: "error"; error: string };
 
-async function cfApi(token: string, _accountId: string, path: string, method = "GET", body?: unknown) {
-  const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  return res.json() as Promise<any>;
-}
-
 function makeGhApi(token: string, agentName: string) {
   return async (path: string, method = "GET", body?: unknown) => {
     const res = await fetch(`https://api.github.com${path}`, {
@@ -57,7 +48,7 @@ function makeGhApi(token: string, agentName: string) {
   };
 }
 
-/** Deploy = create repo + push code. No CF Pages, no DNS, no registry.
+/** Deploy = create repo + push code. No DNS, no registry.
  *  Those are for PUBLISH (separate action). */
 export async function deployApp(
   deployConfig: DeployConfig,
@@ -94,97 +85,36 @@ export async function deployApp(
   }
   onStatus({ phase: "provisioning", steps: [...steps] });
 
-  // Step 2: Create CF Pages project — try clean name first, prefix if squatted
-  const cfBody = (name: string) => ({
-    name,
-    source: {
-      type: "github",
-      config: {
-        owner: config.org,
-        repo_name: deployConfig.id,
-        production_branch: "main",
-        deployments_enabled: true,
-        production_deployments_enabled: true,
-      },
-    },
-    build_config: { build_command: "npx pnpm@10 install && npx pnpm@10 build", destination_dir: "web/dist" },
-    deployment_configs: { production: { env_vars: { NODE_VERSION: { value: "22" } } } },
-  });
-
-  const candidates = [deployConfig.id, `${deployConfig.id}-${Date.now() % 10000}`];
-
-  let cfProject = "";
-  for (const name of candidates) {
-    // Check if we already own this project
-    const check = await cfApi(env.CF_API_TOKEN, env.CF_ACCOUNT_ID, `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${name}`);
-    if (check.success) {
-      cfProject = name;
-      steps.push({ name: "CF Pages", status: "skip", detail: `${name}.pages.dev` });
-      break;
-    }
-    // Try creating it
-    const result = await cfApi(env.CF_API_TOKEN, env.CF_ACCOUNT_ID, `/accounts/${env.CF_ACCOUNT_ID}/pages/projects`, "POST", cfBody(name));
-    if (result.success) {
-      cfProject = name;
-      steps.push({ name: "CF Pages", status: "ok", detail: `${name}.pages.dev` });
-      break;
-    }
-    // "already exists" means squatted by someone else — try next candidate
-    if (result.errors?.[0]?.message?.includes("already")) continue;
-    // Other error — fail
-    steps.push({ name: "CF Pages", status: "fail", detail: result.errors?.[0]?.message || "Failed" });
-    break;
-  }
-  if (!cfProject) {
-    onStatus({ phase: "error", error: "Could not create CF Pages project — all name candidates taken." });
-    return;
-  }
-  onStatus({ phase: "provisioning", steps: [...steps] });
-
-  // Step 3: Push files to GitHub → CF Pages auto-builds
+  // Step 2: Push files to GitHub → GitHub Actions will deploy to R2
   onStatus({ phase: "pushing", progress: "Creating file tree..." });
   await pushFilesToGitHub(deployConfig.id, files, env.GITHUB_TOKEN, config);
   steps.push({ name: "Pushing code", status: "ok", detail: "Code pushed" });
   onStatus({ phase: "provisioning", steps: [...steps] });
 
-  // Step 4: Wait for CF Pages to build
-  const previewUrl = `https://${cfProject}.pages.dev`;
-  onStatus({ phase: "building", deployUrl: previewUrl });
+  // Step 3: Wait for GitHub Actions deploy
+  const appUrl = `https://${deployConfig.id}.${config.domain}`;
+  onStatus({ phase: "building", deployUrl: appUrl });
 
   const deadline = Date.now() + 150_000; // 2.5 min
+  const repo = `${config.org}/${deployConfig.id}`;
   while (Date.now() < deadline) {
     await sleep(8000);
     try {
-      const deps = await cfApi(
-        env.CF_API_TOKEN,
-        env.CF_ACCOUNT_ID,
-        `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
-      );
-      const dep = deps.result?.[0];
-      if (!dep) continue;
-      if (dep.latest_stage?.status === "success") {
-        onStatus({ phase: "live", appUrl: previewUrl });
-        return;
-      }
-      if (dep.latest_stage?.status === "failure") {
-        let buildLog = "";
-        try {
-          const logRes = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments/${dep.id}/history/logs`,
-            { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
-          );
-          const logData = (await logRes.json()) as any;
-          buildLog = ((logData.result?.data || []) as any[])
-            .map((l: any) => l.line || "")
-            .join("\n")
-            .slice(-2000);
-        } catch {}
-        onStatus({ phase: "error", error: `Build failed.\n\n${buildLog || "(no logs)"}` });
-        return;
+      const runs = await ghApi(`/repos/${repo}/actions/runs?per_page=1&status=completed`);
+      const run = runs.workflow_runs?.[0];
+      if (run) {
+        if (run.conclusion === "success") {
+          onStatus({ phase: "live", appUrl });
+          return;
+        }
+        if (run.conclusion === "failure") {
+          onStatus({ phase: "error", error: `GitHub Actions deploy failed. Check: https://github.com/${repo}/actions` });
+          return;
+        }
       }
     } catch {}
   }
-  onStatus({ phase: "live", appUrl: previewUrl }); // timeout — assume building
+  onStatus({ phase: "live", appUrl }); // timeout — assume deploying
 }
 
 /** Push all files as a single commit via the Git Data API (tree + commit + ref). */
@@ -284,7 +214,7 @@ export async function pushUpdate(
   });
   if (!refUpdate.ref) return `Error: failed to update ref for ${repo}: ${refUpdate.message || "unknown"}`;
 
-  return `Pushed update to ${repo} (${commit.sha?.slice(0, 7)}). CF Pages will auto-deploy.`;
+  return `Pushed update to ${repo} (${commit.sha?.slice(0, 7)}). GitHub Actions will deploy to R2.`;
 }
 
 function sleep(ms: number) {

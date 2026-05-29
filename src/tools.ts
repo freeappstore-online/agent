@@ -91,7 +91,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     // ── Deploy + infra tools (executed server-side by the session) ──
     {
       name: "deploy",
-      description: `Full deploy: provision GitHub repo, CF Pages project, then push all project files. Use this for the FIRST deploy of a new ${noun}. Call only when the user explicitly asks to deploy.`,
+      description: `Full deploy: provision GitHub repo, then push all project files. GitHub Actions will deploy to R2. Use this for the FIRST deploy of a new ${noun}. Call only when the user explicitly asks to deploy.`,
       parameters: {
         type: "object",
         properties: {

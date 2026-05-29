@@ -1,4 +1,4 @@
-/** Infra query tools — read-only operations against GitHub, CF, and audit APIs. */
+/** Infra query tools — read-only operations against GitHub and audit APIs. */
 
 import type { StoreConfig } from "./config";
 import type { DeployEnv } from "./deploy";
@@ -17,29 +17,19 @@ function makeGhApi(token: string, agentName: string) {
   };
 }
 
-async function cfApi(token: string, _accountId: string, path: string) {
-  const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-  });
-  return res.json() as Promise<any>;
-}
-
-/** Check the latest deployment status on CF Pages. */
+/** Check the latest deployment status via GitHub Actions. */
 export async function checkDeployStatus(appId: string, env: DeployEnv, config: StoreConfig): Promise<string> {
-  const cfProject = config.cfProjectName(appId);
-  const res = await cfApi(
-    env.CF_API_TOKEN,
-    env.CF_ACCOUNT_ID,
-    `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
-  );
-  if (!res.success || !res.result?.length) {
-    return `No deployments found for ${cfProject}. The ${config.noun} may not be provisioned yet.`;
+  const ghApi = makeGhApi(env.GITHUB_TOKEN, config.agentName);
+  const repo = `${config.org}/${appId}`;
+  const runs = await ghApi(`/repos/${repo}/actions/runs?per_page=1`);
+  if (!runs.workflow_runs?.length) {
+    return `No workflow runs found for ${repo}. The ${config.noun} may not have been deployed yet.`;
   }
-  const d = res.result[0];
-  const status = d.latest_stage?.status || "unknown";
-  const url = d.url || `https://${appId}.${config.domain}`;
-  const created = d.created_on ? new Date(d.created_on).toISOString() : "unknown";
-  return `Latest deploy: ${status}\nURL: ${url}\nCreated: ${created}\nStage: ${d.latest_stage?.name || "unknown"}`;
+  const run = runs.workflow_runs[0];
+  const status = run.status === "completed" ? run.conclusion : run.status;
+  const url = `https://${appId}.${config.domain}`;
+  const created = run.created_at ? new Date(run.created_at).toISOString() : "unknown";
+  return `Latest deploy: ${status}\nURL: ${url}\nCreated: ${created}\nWorkflow: ${run.name || "unknown"}`;
 }
 
 /** List all items from the store registry. */
@@ -69,27 +59,29 @@ export async function fetchUrl(url: string, method: string, agentName: string): 
   }
 }
 
-/** Get CF Pages build logs for the latest deployment. */
+/** Get GitHub Actions build logs for the latest workflow run. */
 export async function getBuildLogs(appId: string, env: DeployEnv, config: StoreConfig): Promise<string> {
-  const cfProject = config.cfProjectName(appId);
-  const deps = await cfApi(
-    env.CF_API_TOKEN,
-    env.CF_ACCOUNT_ID,
-    `/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments?sort_by=created_on&sort_order=desc&per_page=1`,
-  );
-  if (!deps.success || !deps.result?.length) return `No deployments found for ${cfProject}.`;
-  const deployId = deps.result[0].id;
-  const status = deps.result[0].latest_stage?.status || "unknown";
-  const stageName = deps.result[0].latest_stage?.name || "unknown";
+  const ghApi = makeGhApi(env.GITHUB_TOKEN, config.agentName);
+  const repo = `${config.org}/${appId}`;
+  const runs = await ghApi(`/repos/${repo}/actions/runs?per_page=1`);
+  if (!runs.workflow_runs?.length) return `No workflow runs found for ${repo}.`;
+  const run = runs.workflow_runs[0];
+  const status = run.status === "completed" ? run.conclusion : run.status;
 
-  const logRes = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/pages/projects/${cfProject}/deployments/${deployId}/history/logs`,
-    { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
-  );
-  const logData = (await logRes.json()) as any;
-  const lines: string[] = (logData.result?.data || []).map((l: any) => l.line || l.message || JSON.stringify(l));
+  // Fetch jobs for this run to get step-level detail
+  const jobs = await ghApi(`/repos/${repo}/actions/runs/${run.id}/jobs`);
+  const jobLines: string[] = [];
+  for (const job of jobs.jobs || []) {
+    const jobStatus = job.status === "completed" ? job.conclusion : job.status;
+    jobLines.push(`Job: ${job.name} — ${jobStatus}`);
+    for (const step of job.steps || []) {
+      const stepStatus = step.status === "completed" ? step.conclusion : step.status;
+      const icon = stepStatus === "success" ? "✓" : stepStatus === "failure" ? "✗" : "…";
+      jobLines.push(`  ${icon} ${step.name}`);
+    }
+  }
 
-  return `Deploy ${deployId.slice(0, 8)} — stage: ${stageName}, status: ${status}\n\n${lines.join("\n").slice(-3000) || "(no log output)"}`;
+  return `Run ${String(run.id).slice(0, 8)} — workflow: ${run.name}, status: ${status}\n\n${jobLines.join("\n") || "(no job details)"}`;
 }
 
 /** Get GitHub Actions CI check results for a repo. */
