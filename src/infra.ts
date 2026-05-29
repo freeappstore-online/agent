@@ -28,7 +28,9 @@ export async function listDeployed(env: DeployEnv, config: StoreConfig): Promise
   const registry = JSON.parse(new TextDecoder().decode(rawBytes));
   const items = registry[config.nounPlural] || [];
   if (items.length === 0) return `No ${config.nounPlural} deployed yet.`;
-  return items.map((a: any) => `${a.id} — ${a.name} (${a.category}) ${a.appUrl}`).join("\n");
+  return items
+    .map((a: { id: string; name: string; category: string; appUrl: string }) => `${a.id} — ${a.name} (${a.category}) ${a.appUrl}`)
+    .join("\n");
 }
 
 /** Fetch a URL and return the response. Redirects are not followed to prevent SSRF bypass. */
@@ -78,13 +80,15 @@ export async function getCIResults(appId: string, env: DeployEnv, config: StoreC
   const runs = await ghApi(`/repos/${repo}/commits/main/check-runs`);
   if (!runs.check_runs?.length) return `No CI check runs found for ${repo}. CI may not have run yet.`;
 
-  const results = runs.check_runs.map((r: any) => {
-    const status = r.status === "completed" ? r.conclusion : r.status;
-    let detail = "";
-    if (r.output?.summary) detail = r.output.summary.slice(0, 200);
-    else if (r.output?.text) detail = r.output.text.slice(0, 200);
-    return `${status === "success" ? "PASS" : status === "failure" ? "FAIL" : status.toUpperCase()}: ${r.name}${detail ? ` — ${detail}` : ""}`;
-  });
+  const results = runs.check_runs.map(
+    (r: { status: string; conclusion: string; name: string; output?: { summary?: string; text?: string } }) => {
+      const status = r.status === "completed" ? r.conclusion : r.status;
+      let detail = "";
+      if (r.output?.summary) detail = r.output.summary.slice(0, 200);
+      else if (r.output?.text) detail = r.output.text.slice(0, 200);
+      return `${status === "success" ? "PASS" : status === "failure" ? "FAIL" : status.toUpperCase()}: ${r.name}${detail ? ` — ${detail}` : ""}`;
+    },
+  );
 
   return `CI results for ${repo} (${runs.check_runs.length} checks):\n${results.join("\n")}`;
 }
@@ -96,7 +100,10 @@ export async function getAuditResults(appId: string, config: StoreConfig): Promi
       headers: { "User-Agent": config.agentName },
     });
     if (!res.ok) return `Audit API returned ${res.status}. The ${config.noun} may not have been audited yet.`;
-    const data = (await res.json()) as any;
+    const data = (await res.json()) as {
+      summary?: { pass: number; warn: number; fail: number };
+      checks?: { name: string; status: string; detail?: string }[];
+    };
 
     if (data.summary) {
       const s = data.summary;

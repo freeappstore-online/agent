@@ -1,29 +1,34 @@
 {
   "version": "0.28.0",
-  "timestamp": "2026-05-29T21:23:58.420Z",
-  "score": 75,
-  "grade": "B",
+  "timestamp": "2026-05-29T21:15:43.943Z",
+  "score": 72,
+  "grade": "C",
   "checks": [
     {
       "name": "structure",
-      "score": 95,
-      "grade": "A",
+      "score": 80,
+      "grade": "B",
       "details": {
         "found": [
           "package.json",
           "tsconfig.json",
-          "LICENSE",
           ".gitignore",
           "lockfile"
         ],
         "missing": [
+          "LICENSE",
           "README.md"
         ],
-        "srcFiles": 18,
+        "srcFiles": 17,
         "testFiles": 7,
-        "testRatio": "39%"
+        "testRatio": "41%"
       },
       "issues": [
+        {
+          "severity": "error",
+          "message": "Missing LICENSE — Open source license",
+          "rule": "missing-file"
+        },
         {
           "severity": "warning",
           "message": "Missing README.md — Project documentation",
@@ -34,11 +39,11 @@
     },
     {
       "name": "lint",
-      "score": 86,
+      "score": 84,
       "grade": "B",
       "details": {
         "errors": 0,
-        "warnings": 7,
+        "warnings": 8,
         "linter": "biome"
       },
       "issues": [
@@ -56,13 +61,19 @@
         },
         {
           "severity": "warning",
-          "message": "Excessive complexity of 37 detected (max: 25).",
+          "message": "Excessive complexity of 62 detected (max: 25).",
           "file": "src/providers/anthropic.ts",
           "rule": "lint/complexity/noExcessiveCognitiveComplexity"
         },
         {
           "severity": "warning",
-          "message": "Excessive complexity of 41 detected (max: 25).",
+          "message": "Excessive complexity of 36 detected (max: 25).",
+          "file": "src/providers/google.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 68 detected (max: 25).",
           "file": "src/providers/openai.ts",
           "rule": "lint/complexity/noExcessiveCognitiveComplexity"
         },
@@ -85,7 +96,7 @@
           "rule": "lint/complexity/noExcessiveCognitiveComplexity"
         }
       ],
-      "duration": 496
+      "duration": 514
     },
     {
       "name": "types",
@@ -96,55 +107,77 @@
         "ok": true
       },
       "issues": [],
-      "duration": 1143
+      "duration": 1267
     },
     {
       "name": "type-safety",
-      "score": 96,
+      "score": 92,
       "grade": "A",
       "details": {
-        ": any": 4,
-        "filesScanned": 18,
-        "totalUnsafe": 4
+        ": any": 6,
+        "as any": 1,
+        "filesScanned": 17,
+        "totalUnsafe": 7
       },
       "issues": [
         {
           "severity": "warning",
           "message": ": any",
+          "file": "src/infra.ts",
+          "line": 31,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": ": any",
+          "file": "src/infra.ts",
+          "line": 81,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": "as any",
+          "file": "src/infra.ts",
+          "line": 99,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": ": any",
           "file": "src/providers/anthropic.ts",
-          "line": 78,
+          "line": 93,
           "rule": "unsafe-type"
         },
         {
           "severity": "warning",
           "message": ": any",
           "file": "src/providers/google.ts",
-          "line": 78,
+          "line": 94,
           "rule": "unsafe-type"
         },
         {
           "severity": "warning",
           "message": ": any",
           "file": "src/providers/openai.ts",
-          "line": 62,
+          "line": 61,
           "rule": "unsafe-type"
         },
         {
           "severity": "warning",
           "message": ": any",
           "file": "src/providers/openai.ts",
-          "line": 85,
+          "line": 101,
           "rule": "unsafe-type"
         }
       ],
-      "duration": 8
+      "duration": 11
     },
     {
       "name": "standards",
       "score": 70,
       "grade": "C",
       "details": {
-        "filesScanned": 18,
+        "filesScanned": 17,
         "codeSmells": 0,
         "largeFiles": 3,
         "namingViolations": 0
@@ -181,18 +214,18 @@
           "rule": "large-file"
         }
       ],
-      "duration": 11
+      "duration": 13
     },
     {
       "name": "complexity",
-      "score": 59,
+      "score": 43,
       "grade": "D",
       "details": {
-        "totalFiles": 18,
-        "totalLines": 3323,
-        "longFunctions": 7,
-        "complexFunctions": 4,
-        "functionCount": 85
+        "totalFiles": 17,
+        "totalLines": 3379,
+        "longFunctions": 9,
+        "complexFunctions": 6,
+        "functionCount": 80
       },
       "issues": [
         {
@@ -218,6 +251,30 @@
           "message": "executeInfraTool: 65 lines (max 60)",
           "file": "src/infra-exec.ts",
           "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "while: 67 lines (max 60)",
+          "file": "src/providers/anthropic.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "while: complexity 20 (max 15)",
+          "file": "src/providers/anthropic.ts",
+          "rule": "high-complexity"
+        },
+        {
+          "severity": "warning",
+          "message": "while: 69 lines (max 60)",
+          "file": "src/providers/openai.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "while: complexity 23 (max 15)",
+          "file": "src/providers/openai.ts",
+          "rule": "high-complexity"
         },
         {
           "severity": "warning",
@@ -262,141 +319,141 @@
           "rule": "high-complexity"
         }
       ],
-      "duration": 10
+      "duration": 13
     },
     {
       "name": "duplication",
       "score": 0,
       "grade": "F",
       "details": {
-        "filesScanned": 18,
-        "totalSourceLines": 3323,
-        "duplicateBlocks": 71,
-        "duplicationPct": "13%"
+        "filesScanned": 17,
+        "totalSourceLines": 3379,
+        "duplicateBlocks": 87,
+        "duplicationPct": "15%"
       },
       "issues": [
         {
           "severity": "warning",
+          "message": "Duplicate (6 lines): const treeItems: { path: string; mode: string; type: string; sha: string }[] = [...",
+          "file": "src/deploy.ts:125 ↔ src/deploy.ts:170",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): const treeItems: { path: string; mode: string; type: string; sha: string }[] = [...",
+          "file": "src/deploy.ts:126 ↔ src/deploy.ts:171",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
           "message": "Duplicate (6 lines): constructor( | private apiKey: string,",
-          "file": "src/providers/anthropic.ts:5 ↔ src/providers/google.ts:5",
+          "file": "src/providers/anthropic.ts:4 ↔ src/providers/google.ts:4",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): private apiKey: string, | private model: string,",
-          "file": "src/providers/anthropic.ts:6 ↔ src/providers/google.ts:6",
+          "file": "src/providers/anthropic.ts:5 ↔ src/providers/google.ts:5",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): private model: string, | private temperature: number = 0.7,",
+          "file": "src/providers/anthropic.ts:6 ↔ src/providers/google.ts:6",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): private temperature: number = 0.7, | private maxTokens: number = 16384,",
           "file": "src/providers/anthropic.ts:7 ↔ src/providers/google.ts:7",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): private temperature: number = 0.7, | private maxTokens: number = 16384,",
-          "file": "src/providers/anthropic.ts:8 ↔ src/providers/google.ts:8",
-          "rule": "duplicate-code"
-        },
-        {
-          "severity": "warning",
-          "message": "Duplicate (6 lines): private temperature: number = 0.7, | private maxTokens: number = 16384,",
-          "file": "src/providers/google.ts:8 ↔ src/providers/openai.ts:9",
+          "file": "src/providers/google.ts:7 ↔ src/providers/openai.ts:8",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): private maxTokens: number = 16384, | ) {}",
-          "file": "src/providers/anthropic.ts:9 ↔ src/providers/openai.ts:10",
+          "file": "src/providers/anthropic.ts:8 ↔ src/providers/openai.ts:9",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): ) {} | async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): ...",
-          "file": "src/providers/anthropic.ts:10 ↔ src/providers/openai.ts:11",
+          "file": "src/providers/anthropic.ts:9 ↔ src/providers/openai.ts:10",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGe...",
-          "file": "src/providers/anthropic.ts:11 ↔ src/providers/openai.ts:12",
+          "file": "src/providers/anthropic.ts:10 ↔ src/providers/openai.ts:11",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
           "message": "Duplicate (6 lines): }, | body: JSON.stringify(body),",
-          "file": "src/providers/anthropic.ts:33 ↔ src/providers/openai.ts:35",
+          "file": "src/providers/anthropic.ts:32 ↔ src/providers/openai.ts:34",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): for await (const raw of readSSELines(body)) { | let chunk: any;",
-          "file": "src/providers/google.ts:77 ↔ src/providers/openai.ts:84",
+          "message": "Duplicate (6 lines): try { | while (true) {",
+          "file": "src/providers/anthropic.ts:78 ↔ src/providers/google.ts:79",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): let chunk: any; | try {",
-          "file": "src/providers/google.ts:78 ↔ src/providers/openai.ts:85",
+          "message": "Duplicate (6 lines): try { | while (true) {",
+          "file": "src/providers/google.ts:79 ↔ src/providers/openai.ts:85",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): try { | chunk = JSON.parse(raw);",
-          "file": "src/providers/google.ts:79 ↔ src/providers/openai.ts:86",
+          "message": "Duplicate (6 lines): while (true) { | const { done, value } = await reader.read();",
+          "file": "src/providers/anthropic.ts:80 ↔ src/providers/google.ts:81",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): this.session = { | messages: [],",
-          "file": "src/session.ts:59 ↔ src/session.ts:563",
+          "message": "Duplicate (6 lines): while (true) { | const { done, value } = await reader.read();",
+          "file": "src/providers/google.ts:81 ↔ src/providers/openai.ts:87",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): messages: [], | files: { ...getTemplateFiles(this.config) },",
-          "file": "src/session.ts:60 ↔ src/session.ts:564",
+          "message": "Duplicate (6 lines): const { done, value } = await reader.read(); | if (done) break;",
+          "file": "src/providers/anthropic.ts:81 ↔ src/providers/google.ts:82",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): files: { ...getTemplateFiles(this.config) }, | tokenUsage: { input: 0, output: 0...",
-          "file": "src/session.ts:61 ↔ src/session.ts:565",
+          "message": "Duplicate (6 lines): const { done, value } = await reader.read(); | if (done) break;",
+          "file": "src/providers/google.ts:82 ↔ src/providers/openai.ts:88",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): try { | toolResult = await executeInfraTool(tc, {",
-          "file": "src/session.ts:301 ↔ src/session.ts:369",
+          "message": "Duplicate (6 lines): if (done) break; | buf += decoder.decode(value, { stream: true });",
+          "file": "src/providers/anthropic.ts:82 ↔ src/providers/google.ts:83",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): toolResult = await executeInfraTool(tc, { | appId: session.appId,",
-          "file": "src/session.ts:302 ↔ src/session.ts:370",
+          "message": "Duplicate (6 lines): if (done) break; | buf += decoder.decode(value, { stream: true });",
+          "file": "src/providers/google.ts:83 ↔ src/providers/openai.ts:89",
           "rule": "duplicate-code"
         },
         {
           "severity": "warning",
-          "message": "Duplicate (6 lines): appId: session.appId, | files,",
-          "file": "src/session.ts:303 ↔ src/session.ts:371",
-          "rule": "duplicate-code"
-        },
-        {
-          "severity": "warning",
-          "message": "Duplicate (6 lines): files, | env: deployEnv,",
-          "file": "src/session.ts:304 ↔ src/session.ts:372",
-          "rule": "duplicate-code"
-        },
-        {
-          "severity": "warning",
-          "message": "Duplicate (6 lines): env: deployEnv, | config,",
-          "file": "src/session.ts:305 ↔ src/session.ts:373",
+          "message": "Duplicate (6 lines): buf += decoder.decode(value, { stream: true }); | const lines = buf.split(\"\\n\");",
+          "file": "src/providers/anthropic.ts:83 ↔ src/providers/google.ts:84",
           "rule": "duplicate-code"
         }
       ],
-      "duration": 11
+      "duration": 13
     },
     {
       "name": "error-handling",
@@ -408,7 +465,7 @@
         "hasErrorBoundary": "n/a"
       },
       "issues": [],
-      "duration": 5
+      "duration": 4
     },
     {
       "name": "react",
@@ -449,7 +506,7 @@
           "rule": "no-readme"
         }
       ],
-      "duration": 3
+      "duration": 2
     },
     {
       "name": "best-practices",
@@ -506,7 +563,7 @@
     },
     {
       "name": "testing",
-      "score": 49,
+      "score": 48,
       "grade": "D",
       "details": {
         "pyramid": {
@@ -518,18 +575,18 @@
         "layersPresent": "1/2",
         "e2eTool": "none",
         "testFiles": 7,
-        "srcFiles": 18,
-        "pairing": "33%",
+        "srcFiles": 17,
+        "pairing": "36%",
         "quality": {
           "assertionsPerTest": 1.8,
           "mockRatio": 0.21,
           "snapshotRatio": 0
         },
         "coverage": {
-          "stmts": 66.58,
-          "branches": 58.16,
-          "lines": 67.18,
-          "fns": 79.06
+          "stmts": 65.97,
+          "branches": 57.83,
+          "lines": 66.84,
+          "fns": 78.57
         }
       },
       "issues": [
@@ -570,11 +627,11 @@
         },
         {
           "severity": "info",
-          "message": "...and 5 more untested files",
+          "message": "...and 4 more untested files",
           "rule": "untested-file"
         }
       ],
-      "duration": 4498
+      "duration": 4600
     },
     {
       "name": "secrets",
@@ -584,21 +641,21 @@
         "secretsFound": 0
       },
       "issues": [],
-      "duration": 14
+      "duration": 13
     },
     {
       "name": "security",
       "score": 100,
       "grade": "A",
       "details": {
-        "filesScanned": 18,
+        "filesScanned": 17,
         "patterns": 0,
         "cweCategories": 0,
         "errors": 0,
         "warnings": 0
       },
       "issues": [],
-      "duration": 9
+      "duration": 11
     },
     {
       "name": "dependencies",
@@ -624,16 +681,16 @@
           "message": "1 packages behind by a major version"
         }
       ],
-      "duration": 1844
+      "duration": 1825
     },
     {
       "name": "architecture",
-      "score": 93,
-      "grade": "A",
+      "score": 88,
+      "grade": "B",
       "details": {
-        "totalModules": 18,
+        "totalModules": 17,
         "circularDeps": 0,
-        "godModules": 1,
+        "godModules": 2,
         "orphans": 1,
         "highFanOut": 0,
         "connectors": 0,
@@ -734,7 +791,6 @@
           },
           "src/providers/anthropic.ts": {
             "imports": [
-              "src/providers/sse.ts",
               "src/providers/types.ts"
             ],
             "importedBy": [
@@ -754,7 +810,6 @@
           },
           "src/providers/google.ts": {
             "imports": [
-              "src/providers/sse.ts",
               "src/providers/types.ts"
             ],
             "importedBy": [
@@ -764,21 +819,11 @@
           },
           "src/providers/openai.ts": {
             "imports": [
-              "src/providers/sse.ts",
               "src/providers/types.ts"
             ],
             "importedBy": [
               "src/agent.ts",
               "src/providers/github.ts"
-            ],
-            "dir": "src/providers"
-          },
-          "src/providers/sse.ts": {
-            "imports": [],
-            "importedBy": [
-              "src/providers/anthropic.ts",
-              "src/providers/google.ts",
-              "src/providers/openai.ts"
             ],
             "dir": "src/providers"
           },
@@ -853,8 +898,8 @@
             },
             {
               "package": "src/providers",
-              "instability": 0.33,
-              "role": "balanced"
+              "instability": 0.28,
+              "role": "stable (hard to change)"
             }
           ],
           "crossCoupling": 0,
@@ -863,15 +908,22 @@
           "insights": [
             "Clean layering — dependencies flow in one direction without violations.",
             "Low cross-coupling (0%) — packages are well-isolated.",
-            "No god modules — healthy dependency distribution."
+            "Stable foundation detected — core modules rarely change.",
+            "1 god module(s) — consider splitting into focused interfaces."
           ]
         }
       },
       "issues": [
         {
           "severity": "warning",
-          "message": "God module: imported by 9/18 files — consider splitting",
+          "message": "God module: imported by 9/17 files — consider splitting",
           "file": "src/config.ts",
+          "rule": "god-module"
+        },
+        {
+          "severity": "warning",
+          "message": "God module: imported by 8/17 files — consider splitting",
+          "file": "src/providers/types.ts",
           "rule": "god-module"
         },
         {
@@ -888,7 +940,7 @@
       "score": 100,
       "grade": "A",
       "details": {
-        "filesScanned": 18,
+        "filesScanned": 17,
         "barrelImports": 0,
         "heavyDeps": 0,
         "dynamicOpportunities": 0,
@@ -903,7 +955,7 @@
           "rule": "large-import"
         }
       ],
-      "duration": 3
+      "duration": 4
     },
     {
       "name": "confusion",
@@ -914,7 +966,7 @@
         "genericNames": 21,
         "exportCollisions": 0,
         "ambiguousAbbrevs": 1,
-        "filesScanned": 18
+        "filesScanned": 17
       },
       "issues": [
         {
@@ -935,7 +987,7 @@
           "severity": "warning",
           "message": "Generic variable: run — use a descriptive name",
           "file": "src/deploy.ts",
-          "line": 97,
+          "line": 85,
           "rule": "generic-name"
         },
         {
@@ -977,56 +1029,56 @@
           "severity": "warning",
           "message": "Generic variable: res — use a descriptive name",
           "file": "src/infra.ts",
-          "line": 39,
+          "line": 37,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: body — use a descriptive name",
           "file": "src/infra.ts",
-          "line": 44,
+          "line": 42,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: run — use a descriptive name",
           "file": "src/infra.ts",
-          "line": 57,
+          "line": 55,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: res — use a descriptive name",
           "file": "src/infra.ts",
-          "line": 99,
+          "line": 95,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: data — use a descriptive name",
           "file": "src/infra.ts",
-          "line": 103,
+          "line": 99,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: res — use a descriptive name",
           "file": "src/providers/anthropic.ts",
-          "line": 27,
+          "line": 26,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: res — use a descriptive name",
           "file": "src/providers/google.ts",
-          "line": 33,
+          "line": 32,
           "rule": "generic-name"
         },
         {
           "severity": "warning",
           "message": "Generic variable: res — use a descriptive name",
           "file": "src/providers/openai.ts",
-          "line": 30,
+          "line": 29,
           "rule": "generic-name"
         },
         {
@@ -1078,9 +1130,9 @@
       "score": 83,
       "grade": "B",
       "details": {
-        "filesScanned": 18,
-        "totalTokens": 36768,
-        "avgTokensPerFile": 2043,
+        "filesScanned": 17,
+        "totalTokens": 37145,
+        "avgTokensPerFile": 2185,
         "avgImportsPerFile": 2.4,
         "highTokenFiles": 3,
         "heavyImportFiles": 0,
@@ -1128,7 +1180,7 @@
         "description": "Detects contradictions between documentation and code. Finds stale README claims, incorrect JSDoc, outdated API docs, and misleading comments."
       },
       "issues": [],
-      "duration": 1
+      "duration": 2
     },
     {
       "name": "code-coherence",
@@ -1138,19 +1190,19 @@
         "premium": true,
         "comingSoon": true,
         "reason": "LLM-powered analysis — coming soon",
-        "filesAnalyzed": 18,
-        "totalExports": 53,
-        "totalFunctions": 48,
+        "filesAnalyzed": 17,
+        "totalExports": 52,
+        "totalFunctions": 47,
         "description": "Detects internal contradictions: inconsistent validation, conflicting defaults, naming drift, dead config flags, and behavioral mismatches across modules."
       },
       "issues": [],
-      "duration": 2
+      "duration": 1
     }
   ],
   "meta": {
     "cwd": "/Users/serge/dev/stores/fas/agent",
     "node": "v22.21.1",
-    "duration": 8080,
+    "duration": 8317,
     "stack": {
       "language": "typescript",
       "framework": "none",

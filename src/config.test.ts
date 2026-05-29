@@ -41,5 +41,4 @@ describe("getConfig", () => {
     const c = getConfig("");
     expect(c.store).toBe("apps");
   });
-
 });

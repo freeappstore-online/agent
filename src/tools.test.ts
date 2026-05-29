@@ -232,14 +232,22 @@ describe("locked infrastructure files", () => {
 
   it("write_file allows non-locked paths", () => {
     const files = new Map<string, string>();
-    const result = executeTool({ id: "1", name: "write_file", input: { path: "web/src/App.tsx", content: "export default () => <div/>" } }, files, appsConfig);
+    const result = executeTool(
+      { id: "1", name: "write_file", input: { path: "web/src/App.tsx", content: "export default () => <div/>" } },
+      files,
+      appsConfig,
+    );
     expect(result.isError).toBeUndefined();
     expect(files.get("web/src/App.tsx")).toBe("export default () => <div/>");
   });
 
   it("write_file allows new component files", () => {
     const files = new Map<string, string>();
-    const result = executeTool({ id: "1", name: "write_file", input: { path: "web/src/components/Sidebar.tsx", content: "export const Sidebar = () => null" } }, files, appsConfig);
+    const result = executeTool(
+      { id: "1", name: "write_file", input: { path: "web/src/components/Sidebar.tsx", content: "export const Sidebar = () => null" } },
+      files,
+      appsConfig,
+    );
     expect(result.isError).toBeUndefined();
   });
 });

@@ -1,3 +1,4 @@
+import { readSSELines } from "./sse";
 import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class OpenAIAdapter implements ProviderAdapter {
@@ -78,83 +79,52 @@ function toOpenAIMessages(messages: Message[]): unknown[] {
 }
 
 async function* parseOpenAISSE(body: ReadableStream): AsyncGenerator<StreamEvent> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
   const toolAccum: Map<number, { id: string; name: string; argsBuf: string }> = new Map();
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
+  for await (const raw of readSSELines(body)) {
+    let chunk: any;
+    try {
+      chunk = JSON.parse(raw);
+    } catch {
+      continue;
+    }
 
-      const lines = buf.split("\n");
-      buf = lines.pop() || "";
+    if (chunk.usage) {
+      yield { type: "usage", data: JSON.stringify({ input: chunk.usage.prompt_tokens || 0, output: chunk.usage.completion_tokens || 0 }) };
+    }
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (raw === "[DONE]") continue;
-        if (!raw) continue;
+    const delta = chunk.choices?.[0]?.delta;
+    if (!delta) continue;
 
-        let chunk: any;
-        try {
-          chunk = JSON.parse(raw);
-        } catch {
-          continue;
-        }
+    if (delta.content) {
+      yield { type: "text", data: delta.content };
+    }
 
-        // Usage (final chunk)
-        if (chunk.usage) {
-          yield {
-            type: "usage",
-            data: JSON.stringify({
-              input: chunk.usage.prompt_tokens || 0,
-              output: chunk.usage.completion_tokens || 0,
-            }),
-          };
-        }
-
-        const delta = chunk.choices?.[0]?.delta;
-        if (!delta) continue;
-
-        if (delta.content) {
-          yield { type: "text", data: delta.content };
-        }
-
-        if (delta.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index;
-            if (tc.id) {
-              toolAccum.set(idx, { id: tc.id, name: tc.function?.name || "", argsBuf: "" });
-            }
-            const acc = toolAccum.get(idx);
-            if (acc && tc.function?.arguments) {
-              acc.argsBuf += tc.function.arguments;
-              if (tc.function.name) acc.name = tc.function.name;
-            }
-          }
-        }
-
-        // Emit accumulated tool calls on any finish_reason (tool_calls, stop, etc.)
-        if (chunk.choices?.[0]?.finish_reason && toolAccum.size > 0) {
-          for (const [, acc] of toolAccum) {
-            let input: Record<string, unknown> = {};
-            try {
-              input = JSON.parse(acc.argsBuf);
-            } catch {
-              /* empty */
-            }
-            const call: ToolCall = { id: acc.id, name: acc.name, input };
-            yield { type: "tool_call", data: JSON.stringify(call) };
-          }
-          toolAccum.clear();
+    if (delta.tool_calls) {
+      for (const tc of delta.tool_calls) {
+        const idx = tc.index;
+        if (tc.id) toolAccum.set(idx, { id: tc.id, name: tc.function?.name || "", argsBuf: "" });
+        const acc = toolAccum.get(idx);
+        if (acc && tc.function?.arguments) {
+          acc.argsBuf += tc.function.arguments;
+          if (tc.function.name) acc.name = tc.function.name;
         }
       }
     }
-  } finally {
-    reader.releaseLock();
+
+    if (chunk.choices?.[0]?.finish_reason && toolAccum.size > 0) {
+      for (const [, acc] of toolAccum) {
+        let input: Record<string, unknown> = {};
+        try {
+          input = JSON.parse(acc.argsBuf);
+        } catch {
+          /* partial args */
+        }
+        const call: ToolCall = { id: acc.id, name: acc.name, input };
+        yield { type: "tool_call", data: JSON.stringify(call) };
+      }
+      toolAccum.clear();
+    }
   }
 
   yield { type: "done", data: "" };

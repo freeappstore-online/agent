@@ -29,6 +29,18 @@ export type DeployStatus =
   | { phase: "live"; appUrl: string }
   | { phase: "error"; error: string };
 
+type TreeItem = { path: string; mode: string; type: string; sha: string };
+
+async function createBlobs(ghApi: ReturnType<typeof makeGhApi>, repo: string, files: Map<string, string>): Promise<TreeItem[]> {
+  const items: TreeItem[] = [];
+  for (const [path, content] of files) {
+    const blob = await ghApi(`/repos/${repo}/git/blobs`, "POST", { content, encoding: "utf-8" });
+    if (!blob.sha) throw new Error(`Failed to create blob for ${path}: ${blob.message || "unknown error"}`);
+    items.push({ path, mode: "100644", type: "blob", sha: blob.sha });
+  }
+  return items;
+}
+
 /** Deploy = create repo + push code. No DNS, no registry.
  *  Those are for PUBLISH (separate action). */
 export async function deployApp(
@@ -122,16 +134,7 @@ async function pushFilesToGitHub(repoId: string, files: Map<string, string>, tok
   const headRef = await ghApi(`/repos/${repo}/git/ref/heads/main`);
   const parentSha = headRef.object?.sha;
 
-  // Create blobs for each file
-  const treeItems: { path: string; mode: string; type: string; sha: string }[] = [];
-  for (const [path, content] of files) {
-    const blob = await ghApi(`/repos/${repo}/git/blobs`, "POST", {
-      content,
-      encoding: "utf-8",
-    });
-    if (!blob.sha) throw new Error(`Failed to create blob for ${path}: ${blob.message || "unknown error"}`);
-    treeItems.push({ path, mode: "100644", type: "blob", sha: blob.sha });
-  }
+  const treeItems = await createBlobs(ghApi, repo, files);
 
   // Create tree
   const tree = await ghApi(`/repos/${repo}/git/trees`, "POST", {
@@ -168,14 +171,11 @@ export async function pushUpdate(
   const parentSha = ref.object?.sha;
   if (!parentSha) return `Error: could not find HEAD for ${repo}. Is the ${config.noun} deployed?`;
 
-  const treeItems: { path: string; mode: string; type: string; sha: string }[] = [];
-  for (const [path, content] of files) {
-    const blob = await ghApi(`/repos/${repo}/git/blobs`, "POST", {
-      content,
-      encoding: "utf-8",
-    });
-    if (!blob.sha) return `Error: failed to create blob for ${path}: ${blob.message || "unknown"}`;
-    treeItems.push({ path, mode: "100644", type: "blob", sha: blob.sha });
+  let treeItems: TreeItem[];
+  try {
+    treeItems = await createBlobs(ghApi, repo, files);
+  } catch (e) {
+    return `Error: ${e instanceof Error ? e.message : String(e)}`;
   }
 
   const parentCommit = await ghApi(`/repos/${repo}/git/commits/${parentSha}`);

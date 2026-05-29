@@ -1,3 +1,4 @@
+import { readSSELines } from "./sse";
 import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class AnthropicAdapter implements ProviderAdapter {
@@ -71,81 +72,47 @@ function toAnthropicMessages(messages: Message[]): unknown[] {
 }
 
 async function* parseAnthropicSSE(body: ReadableStream): AsyncGenerator<StreamEvent> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
   const toolCalls: Map<number, { id: string; name: string; jsonBuf: string }> = new Map();
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-
-      const lines = buf.split("\n");
-      buf = lines.pop() || "";
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (!raw || raw === "[DONE]") continue;
-
-        let evt: any;
-        try {
-          evt = JSON.parse(raw);
-        } catch {
-          continue;
-        }
-
-        if (evt.type === "content_block_start") {
-          const block = evt.content_block;
-          if (block.type === "tool_use") {
-            toolCalls.set(evt.index, { id: block.id, name: block.name, jsonBuf: "" });
-          }
-        } else if (evt.type === "content_block_delta") {
-          const delta = evt.delta;
-          if (delta.type === "text_delta") {
-            yield { type: "text", data: delta.text };
-          } else if (delta.type === "input_json_delta") {
-            const tc = toolCalls.get(evt.index);
-            if (tc) tc.jsonBuf += delta.partial_json;
-          }
-        } else if (evt.type === "content_block_stop") {
-          const tc = toolCalls.get(evt.index);
-          if (tc) {
-            let input: Record<string, unknown> = {};
-            try {
-              input = JSON.parse(tc.jsonBuf);
-            } catch {
-              /* empty */
-            }
-            const call: ToolCall = { id: tc.id, name: tc.name, input };
-            yield { type: "tool_call", data: JSON.stringify(call) };
-            toolCalls.delete(evt.index);
-          }
-        } else if (evt.type === "message_start" && evt.message?.usage) {
-          // Input tokens from message_start
-          yield {
-            type: "usage",
-            data: JSON.stringify({
-              input: evt.message.usage.input_tokens || 0,
-              output: 0,
-            }),
-          };
-        } else if (evt.type === "message_delta" && evt.usage) {
-          // Output tokens from message_delta (end of message)
-          yield {
-            type: "usage",
-            data: JSON.stringify({
-              input: 0,
-              output: evt.usage.output_tokens || 0,
-            }),
-          };
-        }
-      }
+  for await (const raw of readSSELines(body)) {
+    let evt: any;
+    try {
+      evt = JSON.parse(raw);
+    } catch {
+      continue;
     }
-  } finally {
-    reader.releaseLock();
+
+    if (evt.type === "content_block_start") {
+      const block = evt.content_block;
+      if (block.type === "tool_use") {
+        toolCalls.set(evt.index, { id: block.id, name: block.name, jsonBuf: "" });
+      }
+    } else if (evt.type === "content_block_delta") {
+      const delta = evt.delta;
+      if (delta.type === "text_delta") {
+        yield { type: "text", data: delta.text };
+      } else if (delta.type === "input_json_delta") {
+        const tc = toolCalls.get(evt.index);
+        if (tc) tc.jsonBuf += delta.partial_json;
+      }
+    } else if (evt.type === "content_block_stop") {
+      const tc = toolCalls.get(evt.index);
+      if (tc) {
+        let input: Record<string, unknown> = {};
+        try {
+          input = JSON.parse(tc.jsonBuf);
+        } catch {
+          /* partial JSON */
+        }
+        const call: ToolCall = { id: tc.id, name: tc.name, input };
+        yield { type: "tool_call", data: JSON.stringify(call) };
+        toolCalls.delete(evt.index);
+      }
+    } else if (evt.type === "message_start" && evt.message?.usage) {
+      yield { type: "usage", data: JSON.stringify({ input: evt.message.usage.input_tokens || 0, output: 0 }) };
+    } else if (evt.type === "message_delta" && evt.usage) {
+      yield { type: "usage", data: JSON.stringify({ input: 0, output: evt.usage.output_tokens || 0 }) };
+    }
   }
 
   yield { type: "done", data: "" };

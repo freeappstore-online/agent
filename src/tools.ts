@@ -227,7 +227,11 @@ export function executeTool(toolCall: ToolCall, files: Map<string, string>, conf
         return { id, content: `Error: path "${path}" is not allowed. No "..", absolute paths, or .github/ files.`, isError: true };
       }
       if (LOCKED_FILES.has(path)) {
-        return { id, content: `Error: "${path}" is a locked infrastructure file and cannot be modified. Build your app in web/src/ instead.`, isError: true };
+        return {
+          id,
+          content: `Error: "${path}" is a locked infrastructure file and cannot be modified. Build your app in web/src/ instead.`,
+          isError: true,
+        };
       }
       files.set(path, content);
       return { id, content: `Wrote ${path} (${content.length} bytes)` };

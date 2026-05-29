@@ -1,3 +1,4 @@
+import { readSSELines } from "./sse";
 import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
 
 export class GoogleAdapter implements ProviderAdapter {
@@ -73,63 +74,37 @@ function toGoogleContents(messages: Message[]): unknown[] {
 }
 
 async function* parseGoogleSSE(body: ReadableStream): AsyncGenerator<StreamEvent> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
+  for await (const raw of readSSELines(body)) {
+    let chunk: any;
+    try {
+      chunk = JSON.parse(raw);
+    } catch {
+      continue;
+    }
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
+    if (chunk.usageMetadata) {
+      yield {
+        type: "usage",
+        data: JSON.stringify({ input: chunk.usageMetadata.promptTokenCount || 0, output: chunk.usageMetadata.candidatesTokenCount || 0 }),
+      };
+    }
 
-      const lines = buf.split("\n");
-      buf = lines.pop() || "";
+    const parts = chunk.candidates?.[0]?.content?.parts;
+    if (!parts) continue;
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (!raw) continue;
-
-        let chunk: any;
-        try {
-          chunk = JSON.parse(raw);
-        } catch {
-          continue;
-        }
-
-        // Token usage
-        if (chunk.usageMetadata) {
-          yield {
-            type: "usage",
-            data: JSON.stringify({
-              input: chunk.usageMetadata.promptTokenCount || 0,
-              output: chunk.usageMetadata.candidatesTokenCount || 0,
-            }),
-          };
-        }
-
-        const parts = chunk.candidates?.[0]?.content?.parts;
-        if (!parts) continue;
-
-        for (const part of parts) {
-          if (part.text) {
-            yield { type: "text", data: part.text };
-          }
-          if (part.functionCall) {
-            const fnName = part.functionCall.name;
-            const call: ToolCall = {
-              id: `gfc_${fnName}_${Math.random().toString(36).slice(2, 8)}`,
-              name: fnName,
-              input: part.functionCall.args || {},
-            };
-            yield { type: "tool_call", data: JSON.stringify(call) };
-          }
-        }
+    for (const part of parts) {
+      if (part.text) {
+        yield { type: "text", data: part.text };
+      }
+      if (part.functionCall) {
+        const call: ToolCall = {
+          id: `gfc_${part.functionCall.name}_${Math.random().toString(36).slice(2, 8)}`,
+          name: part.functionCall.name,
+          input: part.functionCall.args || {},
+        };
+        yield { type: "tool_call", data: JSON.stringify(call) };
       }
     }
-  } finally {
-    reader.releaseLock();
   }
 
   yield { type: "done", data: "" };
