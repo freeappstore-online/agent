@@ -1,14 +1,8 @@
+import { BaseAdapter } from "./base";
 import { readSSELines } from "./sse";
-import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
+import type { Message, StreamEvent, ToolCall, ToolDef } from "./types";
 
-export class GoogleAdapter implements ProviderAdapter {
-  constructor(
-    private apiKey: string,
-    private model: string,
-    private temperature: number = 0.7,
-    private maxTokens: number = 16384,
-  ) {}
-
+export class GoogleAdapter extends BaseAdapter {
   async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent> {
     const body: Record<string, unknown> = {
       system_instruction: { parts: [{ text: systemPrompt }] },

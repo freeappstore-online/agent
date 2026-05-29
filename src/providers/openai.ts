@@ -1,14 +1,14 @@
+import { BaseAdapter } from "./base";
 import { readSSELines } from "./sse";
-import type { Message, ProviderAdapter, StreamEvent, ToolCall, ToolDef } from "./types";
+import type { Message, StreamEvent, ToolCall, ToolDef } from "./types";
 
-export class OpenAIAdapter implements ProviderAdapter {
-  constructor(
-    private apiKey: string,
-    private model: string,
-    private baseUrl: string = "https://api.openai.com/v1/chat/completions",
-    private temperature: number = 0.7,
-    private maxTokens: number = 16384,
-  ) {}
+export class OpenAIAdapter extends BaseAdapter {
+  private baseUrl: string;
+
+  constructor(apiKey: string, model: string, baseUrl = "https://api.openai.com/v1/chat/completions", temperature = 0.7, maxTokens = 16384) {
+    super(apiKey, model, temperature, maxTokens);
+    this.baseUrl = baseUrl;
+  }
 
   async *run(systemPrompt: string, messages: Message[], tools: ToolDef[]): AsyncGenerator<StreamEvent> {
     const body: Record<string, unknown> = {
