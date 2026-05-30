@@ -132,6 +132,24 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     ctx.onDeployStatus({ phase: "error", error: deployError });
     return `Deploy FAILED: ${deployError}`;
   }
+
+  // Insert D1 hosting route so the host worker can serve this app from R2
+  if (ctx.env.DB) {
+    const r2Prefix = `${ctx.config.nounPlural}/${appId}`;
+    try {
+      await ctx.env.DB
+        .prepare(
+          `INSERT INTO routes (slug, zone, r2_prefix, store, hosted_on, created_at, updated_at)
+           VALUES (?1, ?2, ?3, ?4, 'r2', ?5, ?5)
+           ON CONFLICT (slug, zone) DO UPDATE SET
+             r2_prefix = excluded.r2_prefix, store = excluded.store,
+             hosted_on = excluded.hosted_on, updated_at = excluded.updated_at`,
+        )
+        .bind(appId, ctx.config.domain, r2Prefix, ctx.config.store, Date.now())
+        .run();
+    } catch { /* D1 insert failed — app deploys but won't be routable until published */ }
+  }
+
   return `Deploy succeeded. Preview: ${liveUrl || "building..."}`;
 }
 

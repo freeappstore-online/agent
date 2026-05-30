@@ -14,6 +14,7 @@ export interface DeployConfig {
 
 export interface DeployEnv {
   GITHUB_TOKEN: string;
+  DB?: D1Database;
 }
 
 interface DeployStep {

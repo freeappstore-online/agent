@@ -22,6 +22,11 @@ new_sqlite_classes = ["AgentSession"]
 binding = "PLATFORM"
 service = "freeappstore-api"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "fas"
+database_id = "a32701c0-5a56-4a12-810d-485166202e39"
+
 [vars]
 STORE = "apps"
 VAPID_PUBLIC_KEY = "BB9nIKmrVFJQJWZ4MiXzv3eN2UfGtuXESqVlQMobPiZiTmS8cQuldiXNreIV03dCo3Jkkflk6UDoAzWMvhNXCuw"

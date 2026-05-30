@@ -8,6 +8,7 @@ export { AgentSession } from "./session";
 export interface Env {
   SESSION: DurableObjectNamespace;
   PLATFORM?: Fetcher;
+  DB: D1Database;
   GITHUB_TOKEN: string;
   STORE: string;
   VAPID_PUBLIC_KEY: string;
