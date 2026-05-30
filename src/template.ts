@@ -120,6 +120,7 @@ createRoot(document.getElementById("root")!).render(
 // ── Apps-specific template files ──
 
 const APP_FILES: Record<string, string> = {
+  "web/src/vite-env.d.ts": `/// <reference types="vite/client" />\n`,
   "web/index.html": `<!DOCTYPE html>
 <html lang="en">
   <head>
