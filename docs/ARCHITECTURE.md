@@ -32,7 +32,7 @@ Users describe what they want, the AI agent writes code, and deploys it — all 
 │  │    5. Repeat until no more tool calls              │  │
 │  │                                                    │  │
 │  │  Infra execution (session.ts):                     │  │
-│  │    - deploy → GitHub repo + CF Pages + push (preview)  │  │
+│  │    - deploy → GitHub repo + push → GH Actions → R2     │  │
 │  │    - push_update → new commit to existing repo     │  │
 │  │    - get_build_logs, get_ci_results, etc.          │  │
 │  │    - Results fed back into conversation history    │  │
@@ -50,8 +50,8 @@ Users describe what they want, the AI agent writes code, and deploys it — all 
 │  GitHub (freeappstore-online org)                        │
 │  → Creates repo, pushes code                             │
 │                                                          │
-│  Cloudflare Pages                                        │
-│  → Auto-builds on push, preview on {id}.pages.dev        │
+│  GitHub Actions → R2 (fas-apps bucket)                   │
+│  → Auto-deploys on push, preview on {id}.freeappstore.online │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -68,7 +68,7 @@ platform/agent/
 │   ├── session.ts           ← Durable Object: state, chat handler, infra execution
 │   ├── agent.ts             ← Agent loop: AI call → tool execution → repeat
 │   ├── tools.ts             ← Tool definitions + local execution (file ops, compliance)
-│   ├── deploy.ts            ← Deploy pipeline: repo + CF Pages + push (write operations)
+│   ├── deploy.ts            ← Deploy pipeline: repo + push → GH Actions → R2 (write operations)
 │   ├── infra.ts             ← Query tools: build logs, CI, audit, list apps (read ops)
 │   ├── infra-exec.ts        ← Infra tool execution + authorization checks
 │   ├── template.ts          ← Template files + system prompt

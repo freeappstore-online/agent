@@ -77,7 +77,7 @@ D1 sessions table). Users can only make AI calls they're authorized for.
 | Token | Scope | Risk | Mitigation |
 |-------|-------|------|-----------|
 | GITHUB_TOKEN | Org-wide repo access | Can create/push to any org repo | Session-scoped authorization limits writes to session's own app |
-| CF_API_TOKEN | Account-wide Pages | Can create/modify any Pages project | Only used through the deploy pipeline which validates app ID |
+| (removed) | CF_API_TOKEN no longer used | Deploy is GitHub-only now (repo + push → GH Actions → R2) | N/A |
 | CF_GLOBAL_KEY | Account-wide DNS | Can modify any DNS record | Not used by agent (DNS creation is in the publisher worker during publish, not deploy) |
 | User's GitHub token | `read:user`, `user:email`, `models:read` | Can read user info + call GitHub Models | Minimal scope, stored per-session, not reusable for repo access |
 
@@ -93,7 +93,7 @@ Replace the org-wide GITHUB_TOKEN with **GitHub App installation tokens**:
 
 Currently limited by:
 - GitHub Models rate limits (per-user, enforced by GitHub)
-- CF Pages project limits (per-account)
+- R2 storage limits (per-account)
 - GitHub repo creation limits (per-org)
 
 No explicit per-user rate limiting in the agent. Future: add a rate limiter
@@ -107,4 +107,4 @@ in the session (max N deploys per user per hour).
 - **Store listing** — the agent can set any name/description/icon for the app.
   Offensive content could end up in the store registry.
 - **Denial of service** — a user could create many sessions/projects, each creating
-  a repo + CF Pages project. Rate limiting should be added.
+  a repo + R2 hosting route. Rate limiting should be added.

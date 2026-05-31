@@ -15,10 +15,10 @@
 
 | Tool | Description | Auth |
 |------|-------------|------|
-| `deploy` | Create GitHub repo + CF Pages project + push code (preview only — no DNS, no registry) | Session-scoped (sets appId) |
+| `deploy` | Create GitHub repo + push code → GitHub Actions deploys to R2 (preview only — no DNS, no registry) | Session-scoped (sets appId) |
 | `push_update` | Push code update to existing app | Session-scoped (must match appId) |
-| `check_deploy_status` | Check CF Pages build status | Session-scoped |
-| `get_build_logs` | Read CF Pages build logs | Session-scoped |
+| `check_deploy_status` | Check GitHub Actions deploy status | Session-scoped |
+| `get_build_logs` | Read GitHub Actions build logs | Session-scoped |
 | `get_ci_results` | Read GitHub Actions check results | Session-scoped |
 | `get_audit_results` | Read quality audit results | Any session |
 | `list_deployed_apps` | List all apps in registry | Any session |
@@ -28,14 +28,14 @@
 
 The `deploy` tool creates a **preview** — not a published store listing:
 
-| | Deploy (agent) | Publish (future / publisher portal) |
+| | Deploy (agent) | Publish (publisher portal) |
 |---|---|---|
 | GitHub repo | Creates in org | Already exists |
-| CF Pages project | Creates (name: `{id}` or `{id}-{rand}`) | Creates (`free{id}app`) |
+| R2 hosting route | Created (D1 routes table) | Created |
 | DNS CNAME | No | Yes |
 | Custom domain | No | Yes (`{id}.freeappstore.online`) |
 | Registry entry | No | Yes |
-| Store visibility | No — preview on `.pages.dev` only | Yes — listed on store |
+| Store visibility | No — preview on `{id}.freeappstore.online` via host worker | Yes — listed on store |
 
 ## Compliance checks (run_compliance_check)
 
