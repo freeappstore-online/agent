@@ -22,20 +22,42 @@ const MAX_MESSAGES = 200;
 const MAX_FILES = 100;
 const MAX_ERRORS = 50;
 
+interface DeployLogEntry {
+  timestamp: string;
+  phase: string;
+  detail: string;
+}
+
 interface SessionState {
   messages: Message[];
   files: Record<string, string>;
   tokenUsage: TokenUsage;
   deployStatus: DeployStatus | null;
+  deployLog: DeployLogEntry[];
   appId: string | null;
   appName: string | null;
   errors: ErrorEntry[];
   ownerId: string | null;
   tokenHash: string | null;
   tokenValidatedAt: number | null;
+  sessionId: string | null;
 }
 
 const TOKEN_REVALIDATE_MS = 30 * 60 * 1000; // Re-verify token every 30 min
+
+/** Extract a human-readable detail string from a deploy status event. */
+function deployStatusDetail(status: DeployStatus): string {
+  switch (status.phase) {
+    case "provisioning": {
+      const last = status.steps[status.steps.length - 1];
+      return last ? `${last.name}: ${last.status} — ${last.detail}` : "Starting...";
+    }
+    case "pushing": return `Pushing code: ${status.progress}`;
+    case "building": return `Building: ${status.deployUrl}`;
+    case "live": return `Live at ${status.appUrl}`;
+    case "error": return status.error;
+  }
+}
 
 export class AgentSession implements DurableObject {
   private state: DurableObjectState;
@@ -56,12 +78,14 @@ export class AgentSession implements DurableObject {
       files: { ...getTemplateFiles(this.config) },
       tokenUsage: { input: 0, output: 0 },
       deployStatus: null,
+      deployLog: [],
       appId: null,
       appName: null,
       errors: [],
       ownerId: null,
       tokenHash: null,
       tokenValidatedAt: null,
+      sessionId: null,
       ...overrides,
     };
   }
@@ -77,9 +101,11 @@ export class AgentSession implements DurableObject {
     }
     // Migrate old sessions
     if (!this.session.errors) this.session.errors = [];
+    if (!this.session.deployLog) this.session.deployLog = [];
     if (this.session.ownerId === undefined) this.session.ownerId = null;
     if (this.session.tokenHash === undefined) this.session.tokenHash = null;
     if (this.session.tokenValidatedAt === undefined) this.session.tokenValidatedAt = null;
+    if (this.session.sessionId === undefined) this.session.sessionId = null;
     return this.session;
   }
 
@@ -144,6 +170,16 @@ export class AgentSession implements DurableObject {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(request, this.config.domain) });
+    }
+
+    // Capture session ID from the worker entry (needed for D1 writes)
+    const headerSessionId = request.headers.get("X-Session-Id");
+    if (headerSessionId) {
+      const session = await this.load();
+      if (!session.sessionId) {
+        session.sessionId = headerSessionId;
+        await this.save();
+      }
     }
 
     try {
@@ -313,18 +349,22 @@ export class AgentSession implements DurableObject {
                 config,
                 onDeployStatus: (status) => {
                   session.deployStatus = status;
+                  this.logDeploy(status.phase, deployStatusDetail(status));
                   this.state.storage.put("session", session);
                   sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
                   if (status.phase === "live") {
                     this.sendPush("Your build is live!");
+                    this.syncToD1();
                   } else if (status.phase === "error") {
                     this.sendPush("Build failed");
+                    this.syncToD1();
                   }
                 },
                 onAppDeployed: (id, name) => {
                   session.appId = id;
                   session.appName = name;
                   session.deployStatus = { phase: "provisioning", steps: [] };
+                  this.logDeploy("provisioning", `Starting deploy for ${name} (${id})`);
                   this.state.storage.put("session", session);
                 },
               });
@@ -381,15 +421,17 @@ export class AgentSession implements DurableObject {
                     config,
                     onDeployStatus: (status) => {
                       session.deployStatus = status;
+                      this.logDeploy(status.phase, deployStatusDetail(status));
                       this.state.storage.put("session", session);
                       sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
-                      if (status.phase === "live") this.sendPush("Your build is live!");
-                      else if (status.phase === "error") this.sendPush("Build failed");
+                      if (status.phase === "live") { this.sendPush("Your build is live!"); this.syncToD1(); }
+                      else if (status.phase === "error") { this.sendPush("Build failed"); this.syncToD1(); }
                     },
                     onAppDeployed: (id, name) => {
                       session.appId = id;
                       session.appName = name;
                       session.deployStatus = { phase: "provisioning", steps: [] };
+                      this.logDeploy("provisioning", `Starting deploy for ${name} (${id})`);
                       this.state.storage.put("session", session);
                     },
                   });
@@ -422,6 +464,7 @@ export class AgentSession implements DurableObject {
             /* best effort */
           }
         }
+        this.syncToD1();
       } finally {
         this.chatInProgress = false;
         writer.close().catch(() => {});
@@ -496,6 +539,34 @@ export class AgentSession implements DurableObject {
     if (this.session.errors.length > 50) this.session.errors = this.session.errors.slice(-50);
   }
 
+  /** Append a deploy event to the persistent log. */
+  private logDeploy(phase: string, detail: string) {
+    if (!this.session) return;
+    this.session.deployLog.push({ timestamp: new Date().toISOString(), phase, detail: detail.slice(0, 500) });
+    // Cap at 200 entries (a single deploy is ~5-10 events; keeps history across deploys)
+    if (this.session.deployLog.length > 200) this.session.deployLog = this.session.deployLog.slice(-200);
+  }
+
+  /** Write deploy_log + errors to D1 for durable persistence beyond DO eviction. */
+  private async syncToD1(): Promise<void> {
+    if (!this.session?.sessionId) return;
+    try {
+      await this.env.DB.prepare(
+        `UPDATE agent_sessions SET deploy_log = ?, errors = ?, deploy_state = ?, updated_at = ? WHERE session_id = ?`,
+      )
+        .bind(
+          JSON.stringify(this.session.deployLog),
+          JSON.stringify(this.session.errors),
+          this.session.deployStatus ? JSON.stringify(this.session.deployStatus) : null,
+          Date.now(),
+          this.session.sessionId,
+        )
+        .run();
+    } catch {
+      // D1 sync is best-effort — DO storage is still authoritative while alive
+    }
+  }
+
   /** GET /errors — return server-side errors for debugging */
   private async handleErrors(request: Request): Promise<Response> {
     const session = await this.load();
@@ -523,6 +594,8 @@ export class AgentSession implements DurableObject {
         appId: session.appId,
         appName: session.appName,
         deployStatus: session.deployStatus,
+        deployLog: session.deployLog,
+        errors: session.errors,
         tokenUsage: session.tokenUsage,
         fileCount: Object.keys(session.files).length,
       },

@@ -120,7 +120,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "check_deploy_status",
-      description: `Check the deployment status of a ${noun} on Cloudflare Pages. Returns the latest deployment status and URL.`,
+      description: `Check the deployment status of a ${noun} via GitHub Actions. Returns the latest deployment status and URL.`,
       parameters: {
         type: "object",
         properties: {
@@ -153,7 +153,7 @@ export function getToolDefinitions(config: StoreConfig): ToolDef[] {
     },
     {
       name: "get_build_logs",
-      description: `Get the latest Cloudflare Pages build/deploy logs for a ${noun}. Use when a deploy fails or the ${noun} isn't working to see build errors, missing dependencies, or compilation failures.`,
+      description: `Get the latest GitHub Actions build/deploy logs for a ${noun}. Use when a deploy fails or the ${noun} isn't working to see build errors, missing dependencies, or compilation failures.`,
       parameters: {
         type: "object",
         properties: {

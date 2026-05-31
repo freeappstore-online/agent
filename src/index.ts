@@ -94,9 +94,12 @@ export default {
       }
     }
 
+    const doHeaders = new Headers(request.headers);
+    doHeaders.set("X-Session-Id", sessionId);
+
     const doRequest = new Request(`https://do${subpath}`, {
       method: request.method,
-      headers: request.headers,
+      headers: doHeaders,
       body: forwardBody,
     });
 

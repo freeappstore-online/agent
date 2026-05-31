@@ -102,7 +102,8 @@ export async function deployApp(
           return;
         }
         if (latestRun.conclusion === "failure") {
-          onStatus({ phase: "error", error: `GitHub Actions deploy failed. Check: https://github.com/${repo}/actions` });
+          const errorDetail = await fetchCIFailureDetails(ghApi, repo, latestRun.id, env.GITHUB_TOKEN);
+          onStatus({ phase: "error", error: errorDetail });
           return;
         }
       }
@@ -111,6 +112,54 @@ export async function deployApp(
     }
   }
   onStatus({ phase: "live", appUrl }); // timeout — assume deploying
+}
+
+/** Fetch detailed step-level failure info from a failed GitHub Actions run. */
+async function fetchCIFailureDetails(
+  ghApi: ReturnType<typeof makeGhApi>,
+  repo: string,
+  runId: number,
+  token: string,
+): Promise<string> {
+  try {
+    const jobs = await ghApi(`/repos/${repo}/actions/runs/${runId}/jobs`);
+    const lines: string[] = [`Deploy failed (run ${runId})`];
+    let failedJobId: number | null = null;
+
+    for (const job of jobs.jobs || []) {
+      const jobStatus = job.status === "completed" ? job.conclusion : job.status;
+      lines.push(`Job: ${job.name} — ${jobStatus}`);
+      for (const step of job.steps || []) {
+        const stepStatus = step.status === "completed" ? step.conclusion : step.status;
+        const icon = stepStatus === "success" ? "✓" : stepStatus === "failure" ? "✗" : stepStatus === "skipped" ? "⊘" : "…";
+        lines.push(`  ${icon} ${step.name}`);
+      }
+      if (jobStatus === "failure" && !failedJobId) failedJobId = job.id;
+    }
+
+    // Try to fetch the actual log output of the failed job
+    if (failedJobId) {
+      try {
+        const logRes = await fetch(`https://api.github.com/repos/${repo}/actions/jobs/${failedJobId}/logs`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": "VibeCode" },
+          redirect: "follow",
+        });
+        if (logRes.ok) {
+          const logText = await logRes.text();
+          // Extract last 1500 chars — most useful error info is at the end
+          const tail = logText.length > 1500 ? logText.slice(-1500) : logText;
+          lines.push("\n--- Failed job log (tail) ---");
+          lines.push(tail);
+        }
+      } catch {
+        // Log fetch failed — step summary is still useful
+      }
+    }
+
+    return lines.join("\n").slice(0, 4000);
+  } catch {
+    return `GitHub Actions deploy failed. Check: https://github.com/${repo}/actions`;
+  }
 }
 
 /** Push all files as a single commit via the Git Data API (tree + commit + ref). */
