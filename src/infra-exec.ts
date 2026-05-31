@@ -8,6 +8,7 @@ import type { ToolCall } from "./providers/types";
 
 interface ExecContext {
   appId: string | null;
+  ownerLogin: string | null;
   files: Map<string, string>;
   env: DeployEnv;
   config: StoreConfig;
@@ -148,6 +149,21 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
         .run();
     } catch {
       /* D1 insert failed — app deploys but won't be routable until published */
+    }
+
+    // Record app ownership so /v1/apps/mine returns it in the console
+    if (ctx.ownerLogin) {
+      try {
+        await ctx.env.DB
+          .prepare(
+            `INSERT OR IGNORE INTO apps (id, owner_login, created_at, category, type, oneliner, store)
+             VALUES (?, ?, ?, ?, 'standalone', ?, ?)`,
+          )
+          .bind(appId, ctx.ownerLogin, Date.now(), (tc.input.category as string) || "utilities", (tc.input.description as string) || appName, ctx.config.store)
+          .run();
+      } catch {
+        /* ownership record is best-effort */
+      }
     }
   }
 

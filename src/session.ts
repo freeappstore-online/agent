@@ -38,6 +38,7 @@ interface SessionState {
   appName: string | null;
   errors: ErrorEntry[];
   ownerId: string | null;
+  ownerLogin: string | null;
   tokenHash: string | null;
   tokenValidatedAt: number | null;
   sessionId: string | null;
@@ -87,6 +88,7 @@ export class AgentSession implements DurableObject {
       appName: null,
       errors: [],
       ownerId: null,
+      ownerLogin: null,
       tokenHash: null,
       tokenValidatedAt: null,
       sessionId: null,
@@ -107,6 +109,7 @@ export class AgentSession implements DurableObject {
     if (!this.session.errors) this.session.errors = [];
     if (!this.session.deployLog) this.session.deployLog = [];
     if (this.session.ownerId === undefined) this.session.ownerId = null;
+    if (this.session.ownerLogin === undefined) this.session.ownerLogin = null;
     if (this.session.tokenHash === undefined) this.session.tokenHash = null;
     if (this.session.tokenValidatedAt === undefined) this.session.tokenValidatedAt = null;
     if (this.session.sessionId === undefined) this.session.sessionId = null;
@@ -161,6 +164,7 @@ export class AgentSession implements DurableObject {
 
     // Bind or refresh session auth
     session.ownerId = user.id;
+    session.ownerLogin = user.login;
     session.tokenHash = await hashToken(token);
     session.tokenValidatedAt = Date.now();
     await this.save();
@@ -346,6 +350,7 @@ export class AgentSession implements DurableObject {
             try {
               toolResult = await executeInfraTool(tc, {
                 appId: session.appId,
+                ownerLogin: session.ownerLogin,
                 files,
                 env: deployEnv,
                 config,
