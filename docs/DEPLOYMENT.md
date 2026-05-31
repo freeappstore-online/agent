@@ -5,7 +5,7 @@
 | Service | URL | Source | Deploys via |
 |---------|-----|--------|-------------|
 | Agent worker | agent.freeappstore.online | `platform/agent/` | `bash scripts/deploy.sh` (safe, doesn't kill DOs) |
-| API (auth) | api.freeappstore.online | `platform/api/` | `npx wrangler deploy` |
+| API (auth) | api.freeappstore.online | `platform/packages/backend/` | `npx wrangler deploy` |
 | Store site | freeappstore.online | `freeappstore/` | `git push` (GitHub Actions → R2) |
 | VibeCode | create.freeappstore.online | `create/` | `git push` (GitHub Actions → R2) |
 | Admin | admin.freeappstore.online | `platform/admin/` | `npx wrangler deploy` |
@@ -100,8 +100,8 @@ CF_ACCOUNT_ID = "c1089bfcc43c1c6c2aa89e584e86f0bc"
   "vars": { "GITHUB_CLIENT_ID": "Ov23liuUpYPXc1ikEFm2" },
   "d1_databases": [{
     "binding": "DB",
-    "database_name": "freeappstore-db",
-    "database_id": "2e998d10-6c2f-4e35-8dc8-9305888a5f58"
+    "database_name": "fas",
+    "database_id": "a32701c0-5a56-4a12-810d-485166202e39"
   }]
 }
 ```
@@ -115,16 +115,19 @@ Individual apps must be fully client-side (localStorage) or have their own worke
 
 ## D1 Database
 
-The API uses a D1 database (`freeappstore-db`) with these tables:
-- `users` — id, email, name, photo_url, provider
-- `sessions` — token, user_id, expires_at, github_token
-- `user_roles` — user_id, role, app
-- `user_data` — user_id, app, key, value
+The API uses a D1 database (`fas`) with tables including:
+- `users` — id, github_login, avatar_url, display_name, email, date_of_birth
+- `apps` — id, owner_login, category, oneliner, store, repo
+- `kv` — app_id, user_id, key, value
+- `routes` — slug, zone, r2_prefix (host worker routing)
+- `agent_sessions` — session_id, user_id, messages, deploy_state, deploy_log, errors
+- `app_logs`, `app_webhooks`, `user_api_keys`, `counters`, `documents`, `app_roles`
 
-Migrations are in `platform/api/migrations/`. Apply with:
+Migrations are in `platform/packages/backend/migrations/`. Apply with:
 ```bash
-cd ~/dev/fas/platform/api
-npx wrangler d1 execute freeappstore-db --remote --command "SQL HERE"
+cd ~/dev/stores/fas/platform/packages/backend
+CLOUDFLARE_API_TOKEN=$(doppler secrets get CLOUDFLARE_API_TOKEN --project fas --config prd --plain) \
+  npx wrangler d1 migrations apply fas --remote
 ```
 
 ## GitHub OAuth App
