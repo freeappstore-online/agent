@@ -6,8 +6,8 @@
 |---------|-----|--------|-------------|
 | Agent worker | agent.freeappstore.online | `platform/agent/` | `bash scripts/deploy.sh` (safe, doesn't kill DOs) |
 | API (auth) | api.freeappstore.online | `platform/api/` | `npx wrangler deploy` |
-| Store site | freeappstore.online | `platform/freeappstore/` | `git push` (CF Pages auto-build) |
-| VibeCode | create.freeappstore.online | `platform/create/` | `git push` (CF Pages auto-build) |
+| Store site | freeappstore.online | `freeappstore/` | `git push` (GitHub Actions → R2) |
+| VibeCode | create.freeappstore.online | `create/` | `git push` (GitHub Actions → R2) |
 | Admin | admin.freeappstore.online | `platform/admin/` | `npx wrangler deploy` |
 | Publisher | publish.freeappstore.online | `platform/publisher/` | `npx wrangler deploy` |
 
@@ -33,7 +33,7 @@ npx wrangler deploy
 ```bash
 cd ~/dev/fas/platform/freeappstore
 git add -A && git commit -m "..." && git push
-# CF Pages auto-builds from main
+# GitHub Actions deploys to R2 on push to main
 ```
 
 The build process (`node build.js`) generates:
@@ -63,7 +63,6 @@ npx wrangler dev                # starts local dev server on :8787
 For local dev, create a `.dev.vars` file (gitignored):
 ```
 GITHUB_TOKEN=ghp_xxx
-CF_API_TOKEN=xxx
 ```
 
 ## Wrangler config
@@ -147,4 +146,4 @@ sign-in redirects fail with "redirect_uri not associated with this application".
 | api.freeappstore.online | API worker | Custom domain in wrangler.jsonc |
 | admin.freeappstore.online | Admin worker | Route in wrangler.toml |
 | publish.freeappstore.online | Publisher worker | Route in wrangler.toml |
-| *.freeappstore.online (apps) | CF Pages | CF Pages custom domain + DNS CNAME |
+| *.freeappstore.online (apps) | Host worker | R2 + D1 routes table (host.freeappstore.online) |
