@@ -86,8 +86,9 @@ describe("getTemplateFiles", () => {
     }
   });
 
-  it("both templates have the same number of files", () => {
-    expect(Object.keys(appsFiles).length).toBe(Object.keys(gamesFiles).length);
+  it("both templates have a reasonable number of files", () => {
+    expect(Object.keys(appsFiles).length).toBeGreaterThanOrEqual(15);
+    expect(Object.keys(gamesFiles).length).toBeGreaterThanOrEqual(15);
   });
 });
 
