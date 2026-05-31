@@ -52,10 +52,14 @@ function deployStatusDetail(status: DeployStatus): string {
       const last = status.steps[status.steps.length - 1];
       return last ? `${last.name}: ${last.status} — ${last.detail}` : "Starting...";
     }
-    case "pushing": return `Pushing code: ${status.progress}`;
-    case "building": return `Building: ${status.deployUrl}`;
-    case "live": return `Live at ${status.appUrl}`;
-    case "error": return status.error;
+    case "pushing":
+      return `Pushing code: ${status.progress}`;
+    case "building":
+      return `Building: ${status.deployUrl}`;
+    case "live":
+      return `Live at ${status.appUrl}`;
+    case "error":
+      return status.error;
   }
 }
 
@@ -282,9 +286,7 @@ export class AgentSession implements DurableObject {
     const writer = writable.getWriter();
 
     // Build deploy env directly from DO's env bindings (no header passing)
-    const deployEnv: DeployEnv | null = this.env.GITHUB_TOKEN
-      ? { GITHUB_TOKEN: this.env.GITHUB_TOKEN, DB: this.env.DB }
-      : null;
+    const deployEnv: DeployEnv | null = this.env.GITHUB_TOKEN ? { GITHUB_TOKEN: this.env.GITHUB_TOKEN, DB: this.env.DB } : null;
 
     const config = this.config;
 
@@ -424,8 +426,13 @@ export class AgentSession implements DurableObject {
                       this.logDeploy(status.phase, deployStatusDetail(status));
                       this.state.storage.put("session", session);
                       sendSSE({ type: "deploy_status", data: JSON.stringify(status) });
-                      if (status.phase === "live") { this.sendPush("Your build is live!"); this.syncToD1(); }
-                      else if (status.phase === "error") { this.sendPush("Build failed"); this.syncToD1(); }
+                      if (status.phase === "live") {
+                        this.sendPush("Your build is live!");
+                        this.syncToD1();
+                      } else if (status.phase === "error") {
+                        this.sendPush("Build failed");
+                        this.syncToD1();
+                      }
                     },
                     onAppDeployed: (id, name) => {
                       session.appId = id;

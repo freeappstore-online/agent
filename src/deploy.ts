@@ -115,12 +115,7 @@ export async function deployApp(
 }
 
 /** Fetch detailed step-level failure info from a failed GitHub Actions run. */
-async function fetchCIFailureDetails(
-  ghApi: ReturnType<typeof makeGhApi>,
-  repo: string,
-  runId: number,
-  token: string,
-): Promise<string> {
+async function fetchCIFailureDetails(ghApi: ReturnType<typeof makeGhApi>, repo: string, runId: number, token: string): Promise<string> {
   try {
     const jobs = await ghApi(`/repos/${repo}/actions/runs/${runId}/jobs`);
     const lines: string[] = [`Deploy failed (run ${runId})`];
