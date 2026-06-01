@@ -1,7 +1,7 @@
 name = "freeappstore-agent"
 main = "src/index.ts"
 compatibility_date = "2025-05-01"
-workers_dev = true
+workers_dev = false
 
 [[routes]]
 pattern = "agent.freeappstore.online/*"
