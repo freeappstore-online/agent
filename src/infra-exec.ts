@@ -155,8 +155,8 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     if (ctx.ownerLogin) {
       try {
         await ctx.env.DB.prepare(
-          `INSERT OR IGNORE INTO apps (id, owner_login, created_at, category, type, oneliner, store)
-             VALUES (?, ?, ?, ?, 'standalone', ?, ?)`,
+          `INSERT OR IGNORE INTO apps (id, owner_login, created_at, category, type, oneliner, display_name, store)
+             VALUES (?, ?, ?, ?, 'standalone', ?, ?, ?)`,
         )
           .bind(
             appId,
@@ -164,6 +164,7 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
             Date.now(),
             (tc.input.category as string) || "utilities",
             (tc.input.description as string) || appName,
+            appName,
             ctx.config.store,
           )
           .run();
