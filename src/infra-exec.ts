@@ -154,12 +154,18 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     // Record app ownership so /v1/apps/mine returns it in the console
     if (ctx.ownerLogin) {
       try {
-        await ctx.env.DB
-          .prepare(
-            `INSERT OR IGNORE INTO apps (id, owner_login, created_at, category, type, oneliner, store)
+        await ctx.env.DB.prepare(
+          `INSERT OR IGNORE INTO apps (id, owner_login, created_at, category, type, oneliner, store)
              VALUES (?, ?, ?, ?, 'standalone', ?, ?)`,
+        )
+          .bind(
+            appId,
+            ctx.ownerLogin,
+            Date.now(),
+            (tc.input.category as string) || "utilities",
+            (tc.input.description as string) || appName,
+            ctx.config.store,
           )
-          .bind(appId, ctx.ownerLogin, Date.now(), (tc.input.category as string) || "utilities", (tc.input.description as string) || appName, ctx.config.store)
           .run();
       } catch {
         /* ownership record is best-effort */
