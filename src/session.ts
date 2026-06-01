@@ -423,6 +423,7 @@ export class AgentSession implements DurableObject {
                 try {
                   toolResult = await executeInfraTool(tc, {
                     appId: session.appId,
+                    ownerLogin: session.ownerLogin,
                     files,
                     env: deployEnv,
                     config,
