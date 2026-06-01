@@ -10,7 +10,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "biome check src/",
+    "lint": "biome check --diagnostic-level=error src/",
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/"
   },
