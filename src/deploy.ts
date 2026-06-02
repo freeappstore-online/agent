@@ -195,10 +195,15 @@ async function pushFilesToGitHub(repoId: string, files: Map<string, string>, tok
   });
   if (!commit.sha) throw new Error(`Failed to create commit: ${commit.message || "unknown error"}`);
 
-  // Update main ref (no force — fails if someone else pushed, preventing data loss)
-  await ghApi(`/repos/${repo}/git/refs/heads/main`, "PATCH", {
+  // Update main ref (no force — fails if someone else pushed, preventing data loss).
+  // Check the result: a rejected push (e.g. missing `workflow` token scope for
+  // .github/workflows/deploy.yml, or a non-fast-forward) must not be swallowed.
+  const refUpdate = await ghApi(`/repos/${repo}/git/refs/heads/main`, "PATCH", {
     sha: commit.sha,
   });
+  if (!refUpdate.ref) {
+    throw new Error(`Failed to update main ref for ${repo}: ${refUpdate.message || "unknown error"}`);
+  }
 }
 
 /** Push an update to an existing repo (new commit on top of existing). */

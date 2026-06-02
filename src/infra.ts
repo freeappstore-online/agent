@@ -81,8 +81,10 @@ export async function getCIResults(appId: string, env: DeployEnv, config: StoreC
   if (!runs.check_runs?.length) return `No CI check runs found for ${repo}. CI may not have run yet.`;
 
   const results = runs.check_runs.map(
-    (r: { status: string; conclusion: string; name: string; output?: { summary?: string; text?: string } }) => {
-      const status = r.status === "completed" ? r.conclusion : r.status;
+    (r: { status: string; conclusion: string | null; name: string; output?: { summary?: string; text?: string } }) => {
+      // conclusion can be null for a completed run (e.g. action_required/stale);
+      // fall back to "pending" so status.toUpperCase() below never throws.
+      const status = (r.status === "completed" ? r.conclusion : r.status) ?? "pending";
       let detail = "";
       if (r.output?.summary) detail = r.output.summary.slice(0, 200);
       else if (r.output?.text) detail = r.output.text.slice(0, 200);
