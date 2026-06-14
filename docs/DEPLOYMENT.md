@@ -7,7 +7,7 @@
 | Agent worker | agent.freeappstore.online | `platform/agent/` | `bash scripts/deploy.sh` (safe, doesn't kill DOs) |
 | API (auth) | api.freeappstore.online | `platform/packages/backend/` | `npx wrangler deploy` |
 | Store site | freeappstore.online | `freeappstore/` | `git push` (GitHub Actions → R2) |
-| VibeCode | create.freeappstore.online | `create/` | `git push` (GitHub Actions → R2) |
+| VibeCode | console.freeappstore.online | `create/` | `git push` (GitHub Actions → R2) |
 | Admin | admin.freeappstore.online | `platform/admin/` | `npx wrangler deploy` |
 | Publisher | publish.freeappstore.online | `platform/publisher/` | `npx wrangler deploy` |
 
