@@ -9,8 +9,8 @@ function req(origin?: string): Request {
 
 describe("corsHeaders", () => {
   it("allows matching subdomain", () => {
-    const h = corsHeaders(req("https://create.freeappstore.online"), "freeappstore.online");
-    expect(h["Access-Control-Allow-Origin"]).toBe("https://create.freeappstore.online");
+    const h = corsHeaders(req("https://console.freeappstore.online"), "freeappstore.online");
+    expect(h["Access-Control-Allow-Origin"]).toBe("https://console.freeappstore.online");
   });
 
   it("allows apex domain", () => {

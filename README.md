@@ -2,7 +2,7 @@
 
 AI-powered app builder for [FreeAppStore](https://freeappstore.online). Users describe an app in natural language, the agent builds it with React + Vite, and deploys it to R2 via GitHub Actions.
 
-Deployed at `agent.freeappstore.online`. Called by the [VibeCode frontend](https://create.freeappstore.online).
+Deployed at `agent.freeappstore.online`. Called by the [VibeCode frontend](https://console.freeappstore.online).
 
 ## Architecture
 
