@@ -113,10 +113,13 @@ describe("executeInfraTool — ID validation", () => {
 });
 
 describe("executeInfraTool — uniqueness check", () => {
-  it("rejects deploy if repo already exists", async () => {
-    // Mock fetch to simulate existing repo
+  it("auto-resolves to the next available ID when the requested one is taken", async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: 123 }) }) as any;
+    // Base repo "taken-app" exists (200); the "-2" variant and any other URL is free (404).
+    globalThis.fetch = vi.fn((url: string) => {
+      const taken = typeof url === "string" && url.endsWith("/taken-app");
+      return Promise.resolve({ status: taken ? 200 : 404, json: () => Promise.resolve(taken ? { id: 123 } : {}) });
+    }) as any;
 
     try {
       const ctx = makeCtx();
@@ -128,7 +131,9 @@ describe("executeInfraTool — uniqueness check", () => {
         },
         ctx,
       );
-      expect(result).toContain('app ID "taken-app" is already taken');
+      // Deploy proceeds under the free variant rather than erroring back to the model.
+      expect(result).not.toContain("already taken");
+      expect(ctx.onAppDeployed).toHaveBeenCalledWith("taken-app-2", "Taken");
     } finally {
       globalThis.fetch = originalFetch;
     }

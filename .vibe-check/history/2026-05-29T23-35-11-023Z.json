@@ -1,0 +1,1173 @@
+{
+  "version": "0.28.0",
+  "timestamp": "2026-05-29T23:35:11.023Z",
+  "score": 77,
+  "grade": "B",
+  "checks": [
+    {
+      "name": "structure",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "found": [
+          "package.json",
+          "tsconfig.json",
+          "LICENSE",
+          ".gitignore",
+          "README.md",
+          "lockfile"
+        ],
+        "missing": [],
+        "srcFiles": 20,
+        "testFiles": 7,
+        "testRatio": "35%"
+      },
+      "issues": [],
+      "duration": 4
+    },
+    {
+      "name": "lint",
+      "score": 88,
+      "grade": "B",
+      "details": {
+        "errors": 0,
+        "warnings": 6,
+        "linter": "biome"
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 68 detected (max: 25).",
+          "file": "src/agent.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 27 detected (max: 25).",
+          "file": "src/index.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 37 detected (max: 25).",
+          "file": "src/providers/anthropic.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 41 detected (max: 25).",
+          "file": "src/providers/openai.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 56 detected (max: 25).",
+          "file": "src/session.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        },
+        {
+          "severity": "warning",
+          "message": "Excessive complexity of 63 detected (max: 25).",
+          "file": "src/tools.ts",
+          "rule": "lint/complexity/noExcessiveCognitiveComplexity"
+        }
+      ],
+      "duration": 560
+    },
+    {
+      "name": "types",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "errors": 0,
+        "ok": true
+      },
+      "issues": [],
+      "duration": 1348
+    },
+    {
+      "name": "type-safety",
+      "score": 96,
+      "grade": "A",
+      "details": {
+        ": any": 4,
+        "filesScanned": 20,
+        "totalUnsafe": 4
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": ": any",
+          "file": "src/providers/anthropic.ts",
+          "line": 72,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": ": any",
+          "file": "src/providers/google.ts",
+          "line": 72,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": ": any",
+          "file": "src/providers/openai.ts",
+          "line": 62,
+          "rule": "unsafe-type"
+        },
+        {
+          "severity": "warning",
+          "message": ": any",
+          "file": "src/providers/openai.ts",
+          "line": 85,
+          "rule": "unsafe-type"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "name": "standards",
+      "score": 70,
+      "grade": "C",
+      "details": {
+        "filesScanned": 20,
+        "codeSmells": 0,
+        "largeFiles": 3,
+        "namingViolations": 0
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "254 lines — getting large",
+          "file": "src/agent.ts",
+          "rule": "large-file"
+        },
+        {
+          "severity": "warning",
+          "message": "206 lines — getting large",
+          "file": "src/deploy.ts",
+          "rule": "large-file"
+        },
+        {
+          "severity": "warning",
+          "message": "662 lines — consider splitting (max 300)",
+          "file": "src/session.ts",
+          "rule": "large-file"
+        },
+        {
+          "severity": "warning",
+          "message": "704 lines — consider splitting (max 300)",
+          "file": "src/template.ts",
+          "rule": "large-file"
+        },
+        {
+          "severity": "warning",
+          "message": "343 lines — consider splitting (max 300)",
+          "file": "src/tools.ts",
+          "rule": "large-file"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "name": "complexity",
+      "score": 67,
+      "grade": "C",
+      "details": {
+        "totalFiles": 20,
+        "totalLines": 3341,
+        "longFunctions": 6,
+        "complexFunctions": 3,
+        "functionCount": 98
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "for: 105 lines (max 60)",
+          "file": "src/agent.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "for: complexity 19 (max 15)",
+          "file": "src/agent.ts",
+          "rule": "high-complexity"
+        },
+        {
+          "severity": "warning",
+          "message": "fetch: 75 lines (max 60)",
+          "file": "src/index.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "executeInfraTool: 65 lines (max 60)",
+          "file": "src/infra-exec.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "handleChat: 237 lines (max 60)",
+          "file": "src/session.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "handleChat: complexity 41 (max 15)",
+          "file": "src/session.ts",
+          "rule": "high-complexity"
+        },
+        {
+          "severity": "warning",
+          "message": "getToolDefinitions: 105 lines (max 60)",
+          "file": "src/tools.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "executeTool: 122 lines (max 60)",
+          "file": "src/tools.ts",
+          "rule": "long-function"
+        },
+        {
+          "severity": "warning",
+          "message": "executeTool: complexity 33 (max 15)",
+          "file": "src/tools.ts",
+          "rule": "high-complexity"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "name": "duplication",
+      "score": 4,
+      "grade": "F",
+      "details": {
+        "filesScanned": 20,
+        "totalSourceLines": 3341,
+        "duplicateBlocks": 63,
+        "duplicationPct": "11%"
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): }, | body: JSON.stringify(body),",
+          "file": "src/providers/anthropic.ts:27 ↔ src/providers/openai.ts:35",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): for await (const raw of readSSELines(body)) { | let chunk: any;",
+          "file": "src/providers/google.ts:71 ↔ src/providers/openai.ts:84",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): let chunk: any; | try {",
+          "file": "src/providers/google.ts:72 ↔ src/providers/openai.ts:85",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): try { | chunk = JSON.parse(raw);",
+          "file": "src/providers/google.ts:73 ↔ src/providers/openai.ts:86",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): this.session = { | messages: [],",
+          "file": "src/session.ts:59 ↔ src/session.ts:563",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): messages: [], | files: { ...getTemplateFiles(this.config) },",
+          "file": "src/session.ts:60 ↔ src/session.ts:564",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): files: { ...getTemplateFiles(this.config) }, | tokenUsage: { input: 0, output: 0...",
+          "file": "src/session.ts:61 ↔ src/session.ts:565",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): try { | toolResult = await executeInfraTool(tc, {",
+          "file": "src/session.ts:301 ↔ src/session.ts:369",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): toolResult = await executeInfraTool(tc, { | appId: session.appId,",
+          "file": "src/session.ts:302 ↔ src/session.ts:370",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): appId: session.appId, | files,",
+          "file": "src/session.ts:303 ↔ src/session.ts:371",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): files, | env: deployEnv,",
+          "file": "src/session.ts:304 ↔ src/session.ts:372",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): env: deployEnv, | config,",
+          "file": "src/session.ts:305 ↔ src/session.ts:373",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): }, | onAppDeployed: (id, name) => {",
+          "file": "src/session.ts:316 ↔ src/session.ts:381",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): onAppDeployed: (id, name) => { | session.appId = id;",
+          "file": "src/session.ts:317 ↔ src/session.ts:382",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): session.appId = id; | session.appName = name;",
+          "file": "src/session.ts:318 ↔ src/session.ts:383",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): session.appName = name; | session.deployStatus = { phase: \"provisioning\", steps:...",
+          "file": "src/session.ts:319 ↔ src/session.ts:384",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): session.deployStatus = { phase: \"provisioning\", steps: [] }; | this.state.storag...",
+          "file": "src/session.ts:320 ↔ src/session.ts:385",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): this.state.storage.put(\"session\", session); | },",
+          "file": "src/session.ts:321 ↔ src/session.ts:386",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): \"module\": \"ESNext\", | \"skipLibCheck\": true,",
+          "file": "src/template.ts:69 ↔ src/template.ts:90",
+          "rule": "duplicate-code"
+        },
+        {
+          "severity": "warning",
+          "message": "Duplicate (6 lines): \"skipLibCheck\": true, | \"moduleResolution\": \"bundler\",",
+          "file": "src/template.ts:70 ↔ src/template.ts:91",
+          "rule": "duplicate-code"
+        }
+      ],
+      "duration": 14
+    },
+    {
+      "name": "error-handling",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "emptyCatch": 0,
+        "throwString": 0,
+        "hasErrorBoundary": "n/a"
+      },
+      "issues": [],
+      "duration": 4
+    },
+    {
+      "name": "react",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "skipped": true,
+        "reason": "not a React project"
+      },
+      "issues": [],
+      "duration": 0
+    },
+    {
+      "name": "accessibility",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "skipped": true,
+        "reason": "no JSX/TSX files"
+      },
+      "issues": [],
+      "duration": 4
+    },
+    {
+      "name": "docs",
+      "score": 69,
+      "grade": "C",
+      "details": {
+        "readmeLines": 48,
+        "totalExports": 45,
+        "documentedExports": 17,
+        "documentedPct": "38%"
+      },
+      "issues": [],
+      "duration": 6
+    },
+    {
+      "name": "best-practices",
+      "score": 57,
+      "grade": "D",
+      "details": {
+        "practicesChecked": 21,
+        "practicesFollowed": 12,
+        "adherence": "57%"
+      },
+      "issues": [
+        {
+          "severity": "info",
+          "message": "No engine constraints (engines in package.json or .nvmrc) — Node version not pinned",
+          "rule": "pin-node-version"
+        },
+        {
+          "severity": "info",
+          "message": "package.json missing repository field — provenance attestation won't link to source",
+          "rule": "repository-field"
+        },
+        {
+          "severity": "info",
+          "message": "No SECURITY.md — users don't know how to report vulnerabilities",
+          "rule": "security-policy"
+        },
+        {
+          "severity": "info",
+          "message": "No CODEOWNERS file — no mandatory reviewers for critical paths",
+          "rule": "codeowners"
+        },
+        {
+          "severity": "info",
+          "message": "No CONTRIBUTING.md — onboarding is harder for new contributors",
+          "rule": "contributing-guide"
+        },
+        {
+          "severity": "info",
+          "message": "No pre-commit hooks (husky/lefthook) — lint/format not enforced before commit",
+          "rule": "pre-commit-hooks"
+        },
+        {
+          "severity": "info",
+          "message": "No Dependabot/Renovate — dependency updates are manual and often forgotten",
+          "rule": "automated-deps"
+        },
+        {
+          "severity": "info",
+          "message": "No commit convention enforcement (commitlint/changesets) — changelog generation is manual",
+          "rule": "conventional-commits"
+        }
+      ],
+      "duration": 2
+    },
+    {
+      "name": "testing",
+      "score": 48,
+      "grade": "D",
+      "details": {
+        "pyramid": {
+          "unit": 7,
+          "integration": 0,
+          "component": 0,
+          "e2e": 0
+        },
+        "layersPresent": "1/2",
+        "e2eTool": "none",
+        "testFiles": 7,
+        "srcFiles": 20,
+        "pairing": "29%",
+        "quality": {
+          "assertionsPerTest": 1.8,
+          "mockRatio": 0.21,
+          "snapshotRatio": 0
+        },
+        "coverage": {
+          "stmts": 66.12,
+          "branches": 58.09,
+          "lines": 66.75,
+          "fns": 83.63
+        }
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "No integration tests — consider testing service boundaries",
+          "rule": "no-integration-tests"
+        },
+        {
+          "severity": "warning",
+          "message": "Only 29% of source files have matching test files",
+          "rule": "low-test-pairing"
+        },
+        {
+          "severity": "info",
+          "message": "No test file for src/agent.ts",
+          "file": "src/agent.ts",
+          "rule": "untested-file"
+        },
+        {
+          "severity": "info",
+          "message": "No test file for src/compliance.ts",
+          "file": "src/compliance.ts",
+          "rule": "untested-file"
+        },
+        {
+          "severity": "info",
+          "message": "No test file for src/cors.ts",
+          "file": "src/cors.ts",
+          "rule": "untested-file"
+        },
+        {
+          "severity": "info",
+          "message": "No test file for src/github.ts",
+          "file": "src/github.ts",
+          "rule": "untested-file"
+        },
+        {
+          "severity": "info",
+          "message": "No test file for src/infra.ts",
+          "file": "src/infra.ts",
+          "rule": "untested-file"
+        },
+        {
+          "severity": "info",
+          "message": "...and 7 more untested files",
+          "rule": "untested-file"
+        }
+      ],
+      "duration": 5221
+    },
+    {
+      "name": "secrets",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "secretsFound": 0
+      },
+      "issues": [],
+      "duration": 16
+    },
+    {
+      "name": "security",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "filesScanned": 20,
+        "patterns": 0,
+        "cweCategories": 0,
+        "errors": 0,
+        "warnings": 0
+      },
+      "issues": [],
+      "duration": 12
+    },
+    {
+      "name": "dependencies",
+      "score": 89,
+      "grade": "B",
+      "details": {
+        "vulnerabilities": {
+          "critical": 0,
+          "high": 0,
+          "moderate": 2,
+          "low": 0
+        },
+        "outdated": 7,
+        "majorOutdated": 1
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "2 moderate vulnerabilities"
+        },
+        {
+          "severity": "warning",
+          "message": "1 packages behind by a major version"
+        }
+      ],
+      "duration": 2433
+    },
+    {
+      "name": "architecture",
+      "score": 93,
+      "grade": "A",
+      "details": {
+        "totalModules": 20,
+        "circularDeps": 0,
+        "godModules": 1,
+        "orphans": 1,
+        "highFanOut": 0,
+        "connectors": 0,
+        "graph": {
+          "src/agent.ts": {
+            "imports": [
+              "src/config.ts",
+              "src/providers/anthropic.ts",
+              "src/providers/github.ts",
+              "src/providers/google.ts",
+              "src/providers/openai.ts",
+              "src/providers/types.ts",
+              "src/template.ts",
+              "src/tools.ts"
+            ],
+            "importedBy": [
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/compliance.ts": {
+            "imports": [
+              "src/config.ts"
+            ],
+            "importedBy": [
+              "src/tools.ts"
+            ],
+            "dir": "src"
+          },
+          "src/config.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/agent.ts",
+              "src/compliance.ts",
+              "src/deploy.ts",
+              "src/index.ts",
+              "src/infra-exec.ts",
+              "src/infra.ts",
+              "src/session.ts",
+              "src/session.ts",
+              "src/template.ts",
+              "src/tools.ts"
+            ],
+            "dir": "src"
+          },
+          "src/cors.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/index.ts",
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/deploy.ts": {
+            "imports": [
+              "src/config.ts",
+              "src/github.ts"
+            ],
+            "importedBy": [
+              "src/infra-exec.ts",
+              "src/infra-exec.ts",
+              "src/infra.ts",
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/github.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/deploy.ts",
+              "src/infra.ts"
+            ],
+            "dir": "src"
+          },
+          "src/index.ts": {
+            "imports": [
+              "src/config.ts",
+              "src/cors.ts"
+            ],
+            "importedBy": [
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/infra-exec.ts": {
+            "imports": [
+              "src/config.ts",
+              "src/deploy.ts",
+              "src/deploy.ts",
+              "src/infra.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/infra.ts": {
+            "imports": [
+              "src/config.ts",
+              "src/deploy.ts",
+              "src/github.ts"
+            ],
+            "importedBy": [
+              "src/infra-exec.ts"
+            ],
+            "dir": "src"
+          },
+          "src/providers/anthropic.ts": {
+            "imports": [
+              "src/providers/base.ts",
+              "src/providers/sse.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/base.ts": {
+            "imports": [
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/providers/anthropic.ts",
+              "src/providers/google.ts",
+              "src/providers/openai.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/github.ts": {
+            "imports": [
+              "src/providers/openai.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/google.ts": {
+            "imports": [
+              "src/providers/base.ts",
+              "src/providers/sse.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/openai.ts": {
+            "imports": [
+              "src/providers/base.ts",
+              "src/providers/sse.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts",
+              "src/providers/github.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/sse.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/providers/anthropic.ts",
+              "src/providers/google.ts",
+              "src/providers/openai.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/providers/types.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/agent.ts",
+              "src/infra-exec.ts",
+              "src/providers/anthropic.ts",
+              "src/providers/base.ts",
+              "src/providers/github.ts",
+              "src/providers/google.ts",
+              "src/providers/openai.ts",
+              "src/session.ts",
+              "src/tools.ts"
+            ],
+            "dir": "src/providers"
+          },
+          "src/push.ts": {
+            "imports": [],
+            "importedBy": [
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/session.ts": {
+            "imports": [
+              "src/agent.ts",
+              "src/config.ts",
+              "src/config.ts",
+              "src/cors.ts",
+              "src/deploy.ts",
+              "src/index.ts",
+              "src/infra-exec.ts",
+              "src/providers/types.ts",
+              "src/push.ts",
+              "src/template.ts"
+            ],
+            "importedBy": [],
+            "dir": "src"
+          },
+          "src/template.ts": {
+            "imports": [
+              "src/config.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts",
+              "src/session.ts"
+            ],
+            "dir": "src"
+          },
+          "src/tools.ts": {
+            "imports": [
+              "src/compliance.ts",
+              "src/config.ts",
+              "src/providers/types.ts"
+            ],
+            "importedBy": [
+              "src/agent.ts"
+            ],
+            "dir": "src"
+          }
+        },
+        "containerSvg": "<svg viewBox=\"0 0 370 120\" xmlns=\"http://www.w3.org/2000/svg\" style=\"width:100%;max-width:370px\"><defs><marker id=\"cont-arrow\" viewBox=\"0 0 10 7\" refX=\"10\" refY=\"3.5\" markerWidth=\"7\" markerHeight=\"5\" orient=\"auto\"><polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#ffffff40\"/></marker></defs><rect x=\"30\" y=\"30\" width=\"140\" height=\"60\" rx=\"8\" fill=\"#d9770615\" stroke=\"#d9770650\"/><text x=\"100\" y=\"54\" text-anchor=\"middle\" fill=\"#e5e5e5\" font-size=\"10\" font-weight=\"700\">Worker</text><text x=\"100\" y=\"70\" text-anchor=\"middle\" fill=\"#6b7280\" font-size=\"8\">[Cloudflare Workers]</text><line x1=\"170\" y1=\"60\" x2=\"200\" y2=\"60\" stroke=\"#ffffff20\" stroke-width=\"1.5\" marker-end=\"url(#cont-arrow)\"/><rect x=\"200\" y=\"30\" width=\"140\" height=\"60\" rx=\"8\" fill=\"#22c55e15\" stroke=\"#22c55e50\"/><text x=\"270\" y=\"54\" text-anchor=\"middle\" fill=\"#e5e5e5\" font-size=\"10\" font-weight=\"700\">API Server</text><text x=\"270\" y=\"70\" text-anchor=\"middle\" fill=\"#6b7280\" font-size=\"8\">[Node.js]</text></svg>",
+        "assessment": {
+          "pattern": "two-tier",
+          "patternDescription": "Two-tier — main code + one sub-package (e.g., src + lib).",
+          "layering": "clean",
+          "stability": [
+            {
+              "package": "src",
+              "instability": 0.56,
+              "role": "balanced"
+            },
+            {
+              "package": "src/providers",
+              "instability": 0.38,
+              "role": "balanced"
+            }
+          ],
+          "crossCoupling": 17,
+          "cohesion": 89,
+          "rating": "excellent",
+          "insights": [
+            "Clean layering — dependencies flow in one direction without violations.",
+            "Low cross-coupling (17%) — packages are well-isolated.",
+            "No god modules — healthy dependency distribution."
+          ]
+        }
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "God module: imported by 10/20 files — consider splitting",
+          "file": "src/config.ts",
+          "rule": "god-module"
+        },
+        {
+          "severity": "warning",
+          "message": "Orphan: not imported by any file (dead module?)",
+          "file": "src/session.ts",
+          "rule": "orphan-module"
+        }
+      ],
+      "duration": 7
+    },
+    {
+      "name": "performance",
+      "score": 100,
+      "grade": "A",
+      "details": {
+        "filesScanned": 20,
+        "barrelImports": 0,
+        "heavyDeps": 0,
+        "dynamicOpportunities": 0,
+        "cssInJsRuntime": 0
+      },
+      "issues": [
+        {
+          "severity": "info",
+          "message": "Large destructured import — if from a barrel, only imported items should be bundled",
+          "file": "src/infra-exec.ts",
+          "line": 6,
+          "rule": "large-import"
+        }
+      ],
+      "duration": 6
+    },
+    {
+      "name": "confusion",
+      "score": 72,
+      "grade": "C",
+      "details": {
+        "fileConfusability": 1,
+        "genericNames": 21,
+        "exportCollisions": 0,
+        "ambiguousAbbrevs": 1,
+        "filesScanned": 20
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Similar filenames: base ↔ sse (edit distance 2)",
+          "file": "src/providers/base.ts",
+          "rule": "similar-filename"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: temp — use a descriptive name",
+          "file": "src/agent.ts",
+          "line": 13,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: result — use a descriptive name",
+          "file": "src/agent.ts",
+          "line": 210,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: run — use a descriptive name",
+          "file": "src/deploy.ts",
+          "line": 97,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/github.ts",
+          "line": 4,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: body — use a descriptive name",
+          "file": "src/index.ts",
+          "line": 73,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/infra-exec.ts",
+          "line": 91,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: result — use a descriptive name",
+          "file": "src/infra-exec.ts",
+          "line": 153,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: run — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 15,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 39,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: body — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 44,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: run — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 57,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 99,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: data — use a descriptive name",
+          "file": "src/infra.ts",
+          "line": 103,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/providers/anthropic.ts",
+          "line": 21,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/providers/google.ts",
+          "line": 27,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/providers/openai.ts",
+          "line": 30,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/push.ts",
+          "line": 18,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: res — use a descriptive name",
+          "file": "src/session.ts",
+          "line": 113,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: body — use a descriptive name",
+          "file": "src/session.ts",
+          "line": 206,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: result — use a descriptive name",
+          "file": "src/session.ts",
+          "line": 268,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Generic variable: body — use a descriptive name",
+          "file": "src/session.ts",
+          "line": 533,
+          "rule": "generic-name"
+        },
+        {
+          "severity": "warning",
+          "message": "Ambiguous abbreviation \"config\" in filename — could mean: which configuration?",
+          "file": "src/config.ts",
+          "rule": "ambiguous-abbreviation"
+        }
+      ],
+      "duration": 7
+    },
+    {
+      "name": "context",
+      "score": 83,
+      "grade": "B",
+      "details": {
+        "filesScanned": 20,
+        "totalTokens": 37113,
+        "avgTokensPerFile": 1856,
+        "avgImportsPerFile": 2.5,
+        "highTokenFiles": 3,
+        "heavyImportFiles": 0,
+        "circularDeps": 0,
+        "contextSinks": 1
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "~7709 tokens (>4000) — large context cost for LLMs",
+          "file": "src/session.ts",
+          "rule": "high-token-count"
+        },
+        {
+          "severity": "warning",
+          "message": "~8634 tokens (>4000) — large context cost for LLMs",
+          "file": "src/template.ts",
+          "rule": "high-token-count"
+        },
+        {
+          "severity": "warning",
+          "message": "~4085 tokens (>4000) — large context cost for LLMs",
+          "file": "src/tools.ts",
+          "rule": "high-token-count"
+        },
+        {
+          "severity": "warning",
+          "message": "10 imports but only 1 export — hard to understand in isolation",
+          "file": "src/session.ts",
+          "rule": "context-sink"
+        }
+      ],
+      "duration": 4
+    },
+    {
+      "name": "doc-coherence",
+      "score": 0,
+      "grade": "F",
+      "details": {
+        "premium": true,
+        "comingSoon": true,
+        "reason": "LLM-powered analysis — coming soon",
+        "docFiles": [
+          "README.md"
+        ],
+        "hasJSDoc": true,
+        "description": "Detects contradictions between documentation and code. Finds stale README claims, incorrect JSDoc, outdated API docs, and misleading comments."
+      },
+      "issues": [],
+      "duration": 3
+    },
+    {
+      "name": "code-coherence",
+      "score": 0,
+      "grade": "F",
+      "details": {
+        "premium": true,
+        "comingSoon": true,
+        "reason": "LLM-powered analysis — coming soon",
+        "filesAnalyzed": 20,
+        "totalExports": 55,
+        "totalFunctions": 60,
+        "description": "Detects internal contradictions: inconsistent validation, conflicting defaults, naming drift, dead config flags, and behavioral mismatches across modules."
+      },
+      "issues": [],
+      "duration": 2
+    }
+  ],
+  "meta": {
+    "cwd": "/Users/serge/dev/stores/fas/agent",
+    "node": "v22.21.1",
+    "duration": 9689,
+    "stack": {
+      "language": "typescript",
+      "framework": "none",
+      "bundler": "none",
+      "testRunner": "vitest",
+      "linter": "biome",
+      "packageManager": "pnpm"
+    },
+    "repoUrl": "https://github.com/freeappstore-online/agent",
+    "branch": "main"
+  }
+}

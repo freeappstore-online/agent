@@ -23,8 +23,13 @@ afterEach(() => {
 });
 
 describe("deploy uniqueness — apps", () => {
-  it("rejects deploy when repo exists (HTTP 200)", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: 1 }) }) as any;
+  it("auto-resolves to the next free ID when the requested one is taken (HTTP 200)", async () => {
+    // Base "taken-app" exists (200); the "-2" variant and other URLs are free (404).
+    globalThis.fetch = vi.fn((url: string) => {
+      const taken = typeof url === "string" && url.endsWith("/taken-app");
+      return Promise.resolve({ status: taken ? 200 : 404, json: () => Promise.resolve(taken ? { id: 1 } : {}) });
+    }) as any;
+    const onAppDeployed = vi.fn();
 
     const result = await executeInfraTool(
       {
@@ -32,9 +37,10 @@ describe("deploy uniqueness — apps", () => {
         name: "deploy",
         input: { id: "taken-app", name: "Taken", category: "utilities", icon: "x", iconBg: "#fff", description: "test" },
       },
-      { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
+      { appId: null, files: new Map(), env: mockEnv, config: appsConfig, onDeployStatus: vi.fn(), onAppDeployed },
     );
-    expect(result).toContain("already taken");
+    expect(result).not.toContain("already taken");
+    expect(onAppDeployed).toHaveBeenCalledWith("taken-app-2", "Taken");
   });
 
   it("allows deploy when repo does not exist (HTTP 404)", async () => {
@@ -78,8 +84,13 @@ describe("deploy uniqueness — apps", () => {
 });
 
 describe("deploy uniqueness — games", () => {
-  it("rejects deploy when repo exists", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ status: 200, json: () => Promise.resolve({ id: 1 }) }) as any;
+  it("auto-resolves to the next free ID when the requested one is taken", async () => {
+    // Base "taken-game" exists (200); the "-2" variant and other URLs are free (404).
+    globalThis.fetch = vi.fn((url: string) => {
+      const taken = typeof url === "string" && url.endsWith("/taken-game");
+      return Promise.resolve({ status: taken ? 200 : 404, json: () => Promise.resolve(taken ? { id: 1 } : {}) });
+    }) as any;
+    const onAppDeployed = vi.fn();
 
     const result = await executeInfraTool(
       {
@@ -87,9 +98,10 @@ describe("deploy uniqueness — games", () => {
         name: "deploy",
         input: { id: "taken-game", name: "Taken", category: "arcade", icon: "x", iconBg: "#fff", description: "test" },
       },
-      { appId: null, files: new Map(), env: mockEnv, config: gamesConfig, onDeployStatus: vi.fn(), onAppDeployed: vi.fn() },
+      { appId: null, files: new Map(), env: mockEnv, config: gamesConfig, onDeployStatus: vi.fn(), onAppDeployed },
     );
-    expect(result).toContain("already taken");
+    expect(result).not.toContain("already taken");
+    expect(onAppDeployed).toHaveBeenCalledWith("taken-game-2", "Taken");
     // Verify it checked the correct org
     expect((globalThis.fetch as any).mock.calls[0][0]).toContain("freegamestore-online");
   });

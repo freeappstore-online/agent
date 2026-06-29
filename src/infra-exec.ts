@@ -83,21 +83,46 @@ export async function executeInfraTool(tc: ToolCall, ctx: ExecContext): Promise<
   }
 }
 
+/** True if a repo with this id already exists in the org. */
+async function repoExists(id: string, ctx: ExecContext): Promise<boolean> {
+  const res = await fetch(`https://api.github.com/repos/${ctx.config.org}/${id}`, {
+    headers: {
+      Authorization: `Bearer ${ctx.env.GITHUB_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": ctx.config.agentName,
+    },
+  });
+  return res.status === 200;
+}
+
+/**
+ * Resolve a collision-free id. Returns the requested id if available, else the
+ * first free `-2`, `-3`, … variant. Checking up front and picking an available
+ * id beats erroring back to the model, which just guesses another name and
+ * collides again. Trims the base so the suffix stays within the 58-char limit.
+ */
+async function resolveAvailableId(baseId: string, ctx: ExecContext): Promise<string> {
+  if (!(await repoExists(baseId, ctx))) return baseId;
+  for (let n = 2; n <= 50; n++) {
+    const suffix = `-${n}`;
+    const candidate = `${baseId.slice(0, 58 - suffix.length).replace(/-+$/, "")}${suffix}`;
+    if (!(await repoExists(candidate, ctx))) return candidate;
+  }
+  throw new Error(`Could not find an available ${ctx.config.noun} ID based on "${baseId}". Try a different name.`);
+}
+
 async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
-  const appId = tc.input.id as string;
+  const requestedId = tc.input.id as string;
   const appName = tc.input.name as string;
 
-  // Uniqueness check: reject if repo already exists and this session didn't create it
+  // Always check for duplicates before choosing the id: if the requested id is
+  // taken, deploy under the next available `-N` variant instead of failing.
+  let appId = requestedId;
   if (!ctx.appId) {
-    const res = await fetch(`https://api.github.com/repos/${ctx.config.org}/${appId}`, {
-      headers: {
-        Authorization: `Bearer ${ctx.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": ctx.config.agentName,
-      },
-    });
-    if (res.status === 200) {
-      return `Error: ${ctx.config.noun} ID "${appId}" is already taken. Choose a different ID.`;
+    try {
+      appId = await resolveAvailableId(requestedId, ctx);
+    } catch (e) {
+      return `Error: ${e instanceof Error ? e.message : String(e)}`;
     }
   }
 
@@ -174,7 +199,8 @@ async function executeDeploy(tc: ToolCall, ctx: ExecContext): Promise<string> {
     }
   }
 
-  return `Deploy succeeded. Preview: ${liveUrl || "building..."}`;
+  const renamed = appId !== requestedId ? ` (ID "${requestedId}" was taken — deployed as "${appId}")` : "";
+  return `Deploy succeeded${renamed}. Preview: ${liveUrl || "building..."}`;
 }
 
 /** Replace APPNAME (display name; id in package.json) + APPID (the slug, everywhere). */
